@@ -1,54 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { CheckCircle2, Clock3, Sparkles, Star } from 'lucide-react-native';
-
+import type { AppLocale } from '../../onboarding/preferences';
+import type { LessonContent } from '../data/lessonCatalog';
 import { colors, fonts, radius, spacing } from '../../../theme/tokens';
-import { presentContinuousLesson as lesson } from '../data/presentContinuousLesson';
 
-type Props = { evaluationMessage: string; practiceCorrect: boolean; response: string };
+type Props = { evaluationMessage: string; lesson: LessonContent; locale: AppLocale; practiceCorrect: boolean; response: string };
 
-export function ReviewStage({ evaluationMessage, practiceCorrect, response }: Props) {
+export function ReviewStage({ evaluationMessage, lesson, locale, practiceCorrect, response }: Props) {
   const xp = lesson.rewards.completionXp + (practiceCorrect ? lesson.rewards.perfectPracticeBonusXp : 0);
-
-  return (
-    <View style={styles.stage}>
-      <View style={styles.hero}>
-        <View style={styles.heroIcon}><CheckCircle2 color={colors.success} size={52} /></View>
-        <Text style={styles.eyebrow}>LEÇON TERMINÉE</Text>
-        <Text style={styles.title}>Belle découverte !</Text>
-        <Text style={styles.subtitle}>Vous avez observé, formulé le motif et créé vos propres exemples.</Text>
-      </View>
-
-      <View style={styles.rewards}>
-        <View style={styles.rewardCard}><Star color={colors.xp} fill={colors.xp} size={27} /><Text style={styles.rewardValue}>+{xp} XP</Text><Text style={styles.rewardLabel}>GAGNÉS</Text></View>
-        <View style={styles.rewardCard}><Clock3 color={colors.primary} size={27} /><Text style={styles.rewardValue}>1 leçon</Text><Text style={styles.rewardLabel}>TERMINÉE</Text></View>
-      </View>
-
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Votre production</Text>
-        <Text style={styles.response}>{response.trim()}</Text>
-        <View style={styles.evaluationRow}>
-          <Sparkles color={colors.discovery} size={20} />
-          <Text style={styles.evaluationText}>{evaluationMessage}</Text>
-        </View>
-      </View>
-    </View>
-  );
+  return <View style={styles.stage}><View style={styles.hero}><View style={styles.heroIcon}><CheckCircle2 color={colors.success} size={52} /></View><Text style={styles.eyebrow}>{locale === 'fr' ? 'LEÇON TERMINÉE' : 'LESSON COMPLETE'}</Text><Text style={styles.title}>{locale === 'fr' ? 'Belle découverte !' : 'Great discovery!'}</Text><Text style={styles.subtitle}>{locale === 'fr' ? 'Vous avez observé, formulé le motif et créé vos propres exemples.' : 'You noticed the examples, formed the pattern and created your own sentences.'}</Text></View><View style={styles.rewards}><View style={styles.rewardCard}><Star color={colors.xp} fill={colors.xp} size={27} /><Text style={styles.rewardValue}>+{xp} XP</Text><Text style={styles.rewardLabel}>{locale === 'fr' ? 'GAGNÉS' : 'EARNED'}</Text></View><View style={styles.rewardCard}><Clock3 color={colors.primary} size={27} /><Text style={styles.rewardValue}>{locale === 'fr' ? '1 leçon' : '1 lesson'}</Text><Text style={styles.rewardLabel}>{locale === 'fr' ? 'TERMINÉE' : 'COMPLETE'}</Text></View></View><View style={styles.summaryCard}><Text style={styles.summaryTitle}>{locale === 'fr' ? 'Votre production' : 'Your response'}</Text><Text style={styles.response}>{response.trim()}</Text><View style={styles.evaluationRow}><Sparkles color={colors.discovery} size={20} /><Text style={styles.evaluationText}>{evaluationMessage}</Text></View></View></View>;
 }
 
-const styles = StyleSheet.create({
-  stage: { gap: spacing.xxl },
-  hero: { alignItems: 'center', gap: spacing.sm },
-  heroIcon: { alignItems: 'center', backgroundColor: colors.successSoft, borderRadius: radius.pill, height: 104, justifyContent: 'center', width: 104 },
-  eyebrow: { color: colors.success, fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 1 },
-  title: { color: colors.text, fontFamily: fonts.bold, fontSize: 31, textAlign: 'center' },
-  subtitle: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 15, lineHeight: 23, textAlign: 'center' },
-  rewards: { flexDirection: 'row', gap: spacing.md },
-  rewardCard: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.outline, borderRadius: radius.lg, borderWidth: 1, flex: 1, gap: spacing.sm, padding: spacing.lg },
-  rewardValue: { color: colors.text, fontFamily: fonts.bold, fontSize: 20 },
-  rewardLabel: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10, letterSpacing: 0.8 },
-  summaryCard: { backgroundColor: colors.surface, borderColor: colors.outline, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, padding: spacing.xl },
-  summaryTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 18 },
-  response: { color: colors.text, fontFamily: fonts.regular, fontSize: 16, fontStyle: 'italic', lineHeight: 25 },
-  evaluationRow: { alignItems: 'flex-start', backgroundColor: '#F6F1FC', borderRadius: radius.md, flexDirection: 'row', gap: spacing.sm, padding: spacing.md },
-  evaluationText: { color: colors.textMuted, flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 20 },
-});
+const styles = StyleSheet.create({ stage: { gap: spacing.xxl }, hero: { alignItems: 'center', gap: spacing.sm }, heroIcon: { alignItems: 'center', backgroundColor: colors.successSoft, borderRadius: radius.pill, height: 104, justifyContent: 'center', width: 104 }, eyebrow: { color: colors.success, fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 1 }, title: { color: colors.text, fontFamily: fonts.bold, fontSize: 31, textAlign: 'center' }, subtitle: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 15, lineHeight: 23, textAlign: 'center' }, rewards: { flexDirection: 'row', gap: spacing.md }, rewardCard: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.outline, borderRadius: radius.lg, borderWidth: 1, flex: 1, gap: spacing.sm, padding: spacing.lg }, rewardValue: { color: colors.text, fontFamily: fonts.bold, fontSize: 20 }, rewardLabel: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10, letterSpacing: 0.8 }, summaryCard: { backgroundColor: colors.surface, borderColor: colors.outline, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, padding: spacing.xl }, summaryTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 18 }, response: { color: colors.text, fontFamily: fonts.regular, fontSize: 16, fontStyle: 'italic', lineHeight: 25 }, evaluationRow: { alignItems: 'flex-start', backgroundColor: '#F6F1FC', borderRadius: radius.md, flexDirection: 'row', gap: spacing.sm, padding: spacing.md }, evaluationText: { color: colors.textMuted, flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 20 } });

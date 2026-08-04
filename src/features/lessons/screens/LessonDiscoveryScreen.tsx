@@ -10,7 +10,8 @@ import { LessonProgress } from '../components/LessonProgress';
 import { PracticeStage } from '../components/PracticeStage';
 import { ProduceStage } from '../components/ProduceStage';
 import { ReviewStage } from '../components/ReviewStage';
-import { presentContinuousLesson as lesson, type LessonStep } from '../data/presentContinuousLesson';
+import { getLesson, type LessonContent, type LessonStep } from '../data/lessonCatalog';
+import { useLearnerPreferences, type AppLocale } from '../../onboarding/preferences';
 import { queueProductionEvaluation } from '../services/productionEvaluation';
 import { completeLessonAttempt, startLessonAttempt, type AttemptHandle } from '../services/lessonProgress';
 
@@ -19,6 +20,8 @@ type Props = NativeStackScreenProps<LearnerStackParamList, 'LessonDiscovery'>;
 const stepOrder: LessonStep[] = ['experience', 'notice', 'discover', 'practice', 'produce', 'review'];
 
 export function LessonDiscoveryScreen({ navigation }: Props) {
+  const { level, locale } = useLearnerPreferences();
+  const lesson = getLesson(level, locale);
   const [step, setStep] = useState<LessonStep>('experience');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [practiceAnswer, setPracticeAnswer] = useState<string | null>(null);
@@ -60,7 +63,7 @@ export function LessonDiscoveryScreen({ navigation }: Props) {
         const evaluation = await queueProductionEvaluation({ attemptId: attempt?.attemptId, lessonId: attempt?.lessonId ?? lesson.id, response: production });
         setEvaluationMessage(evaluation.message);
       } catch {
-        setEvaluationMessage('Votre production a été enregistrée. L’évaluation IA sera relancée dès que le service sera disponible.');
+        setEvaluationMessage(locale === 'fr' ? 'Votre production a été enregistrée. L’évaluation IA reprendra dès que le service sera disponible.' : 'Your response was saved. AI evaluation will resume when the service is available.');
       } finally {
         setSubmitting(false);
       }
@@ -71,17 +74,17 @@ export function LessonDiscoveryScreen({ navigation }: Props) {
 
   const continueLabel =
     step === 'review'
-      ? 'Retour au tableau de bord'
+      ? (locale === 'fr' ? 'Retour au tableau de bord' : 'Back to dashboard')
       : step === 'practice' && !practiceChecked
-        ? 'Vérifier ma réponse'
+        ? (locale === 'fr' ? 'Vérifier ma réponse' : 'Check my answer')
         : step === 'produce'
-          ? submitting ? 'Envoi…' : 'Envoyer ma production'
-          : 'Continuer';
+          ? submitting ? (locale === 'fr' ? 'Envoi…' : 'Sending…') : (locale === 'fr' ? 'Envoyer ma production' : 'Submit my response')
+          : (locale === 'fr' ? 'Continuer' : 'Continue');
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Fermer la leçon" accessibilityRole="button" hitSlop={12} onPress={navigation.goBack}>
+        <Pressable accessibilityLabel={locale === 'fr' ? 'Fermer la leçon' : 'Close lesson'} accessibilityRole="button" hitSlop={12} onPress={navigation.goBack}>
           <ArrowLeft color={colors.text} size={26} />
         </Pressable>
         <View style={styles.headerCopy}>
@@ -91,18 +94,20 @@ export function LessonDiscoveryScreen({ navigation }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <LessonProgress current={step} />
+        <LessonProgress current={step} locale={locale} />
 
-        {step === 'experience' ? <ExperienceStage /> : null}
+        {step === 'experience' ? <ExperienceStage lesson={lesson} /> : null}
         {step === 'notice' ? (
-          <NoticeStage onSelect={setSelectedOption} selectedOption={selectedOption} />
+          <NoticeStage lesson={lesson} locale={locale} onSelect={setSelectedOption} selectedOption={selectedOption} />
         ) : null}
-        {step === 'discover' ? <DiscoverStage /> : null}
-        {step === 'practice' ? <PracticeStage answer={practiceAnswer} checked={practiceChecked} onAnswer={setPracticeAnswer} /> : null}
-        {step === 'produce' ? <ProduceStage onChange={setProduction} value={production} /> : null}
+        {step === 'discover' ? <DiscoverStage lesson={lesson} locale={locale} /> : null}
+        {step === 'practice' ? <PracticeStage answer={practiceAnswer} checked={practiceChecked} lesson={lesson} locale={locale} onAnswer={setPracticeAnswer} /> : null}
+        {step === 'produce' ? <ProduceStage lesson={lesson} locale={locale} onChange={setProduction} value={production} /> : null}
         {step === 'review' ? (
           <ReviewStage
             evaluationMessage={evaluationMessage}
+            lesson={lesson}
+            locale={locale}
             practiceCorrect={practiceAnswer === lesson.practice.correctOptionId}
             response={production}
           />
@@ -111,7 +116,7 @@ export function LessonDiscoveryScreen({ navigation }: Props) {
 
       <View style={styles.footer}>
         {step === 'notice' && selectedOption && !canContinue ? (
-          <Text accessibilityLiveRegion="polite" style={styles.tryAgain}>Regardez encore les mots colorés dans les exemples.</Text>
+          <Text accessibilityLiveRegion="polite" style={styles.tryAgain}>{locale === 'fr' ? 'Regardez encore les mots colorés dans les exemples.' : 'Look again at the highlighted words in the examples.'}</Text>
         ) : null}
         <Pressable
           accessibilityRole="button"
@@ -127,7 +132,7 @@ export function LessonDiscoveryScreen({ navigation }: Props) {
   );
 }
 
-function ExperienceStage() {
+function ExperienceStage({ lesson }: { lesson: LessonContent }) {
   return (
     <View style={styles.stage}>
       <View style={styles.scene}>
@@ -135,7 +140,7 @@ function ExperienceStage() {
         <Trees color={colors.success} size={88} strokeWidth={1.4} />
         <View style={styles.sceneCopy}>
           <Text style={styles.sceneEyebrow}>{lesson.context}</Text>
-          <Text style={styles.sceneTitle}>Tout le monde est en mouvement.</Text>
+          <Text style={styles.sceneTitle}>{lesson.sceneTitle}</Text>
         </View>
       </View>
       <View style={styles.guideCard}>
@@ -154,13 +159,13 @@ function ExperienceStage() {
   );
 }
 
-function NoticeStage({ onSelect, selectedOption }: { onSelect: (id: string) => void; selectedOption: string | null }) {
+function NoticeStage({ lesson, locale, onSelect, selectedOption }: { lesson: LessonContent; locale: AppLocale; onSelect: (id: string) => void; selectedOption: string | null }) {
   return (
     <View style={styles.stage}>
       <View style={styles.stageHeading}>
         <View style={styles.stageIcon}><Eye color={colors.discovery} size={25} /></View>
         <View style={styles.stageHeadingCopy}>
-          <Text style={styles.stageEyebrow}>À VOUS D’OBSERVER</Text>
+          <Text style={styles.stageEyebrow}>{locale === 'fr' ? 'À VOUS D’OBSERVER' : 'YOUR TURN TO NOTICE'}</Text>
           <Text style={styles.stageTitle}>{lesson.noticeQuestion}</Text>
         </View>
       </View>
@@ -190,23 +195,23 @@ function NoticeStage({ onSelect, selectedOption }: { onSelect: (id: string) => v
   );
 }
 
-function DiscoverStage() {
+function DiscoverStage({ lesson, locale }: { lesson: LessonContent; locale: AppLocale }) {
   return (
     <View style={styles.stage}>
       <View style={styles.discoveryHero}>
         <View style={styles.discoveryIcon}><Lightbulb color={colors.xp} fill={colors.xp} size={42} /></View>
-        <Text style={styles.discoveryEyebrow}>VOTRE DÉCOUVERTE</Text>
-        <Text style={styles.discoveryTitle}>Vous avez trouvé le motif.</Text>
+        <Text style={styles.discoveryEyebrow}>{locale === 'fr' ? 'VOTRE DÉCOUVERTE' : 'YOUR DISCOVERY'}</Text>
+        <Text style={styles.discoveryTitle}>{locale === 'fr' ? 'Vous avez trouvé le motif.' : 'You found the pattern.'}</Text>
       </View>
       <View style={styles.discoveryCard}>
         <Text style={styles.discoveryText}>{lesson.discovery}</Text>
         <View style={styles.formula}>
-          <Text style={styles.formulaPart}>am / is / are</Text>
+          <Text style={styles.formulaPart}>{lesson.formula[0]}</Text>
           <Text style={styles.formulaPlus}>+</Text>
-          <Text style={styles.formulaPart}>verbe-ing</Text>
+          <Text style={styles.formulaPart}>{lesson.formula[1]}</Text>
         </View>
       </View>
-      <Text style={styles.nextHint}>Ensuite, vous pratiquerez ce motif dans de nouvelles situations.</Text>
+      <Text style={styles.nextHint}>{locale === 'fr' ? 'Ensuite, vous pratiquerez ce motif dans de nouvelles situations.' : 'Next, you will practise this pattern in new situations.'}</Text>
     </View>
   );
 }

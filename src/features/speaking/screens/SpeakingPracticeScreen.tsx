@@ -6,11 +6,13 @@ import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, 
 
 import { env } from '../../../config/env';
 import { supabase } from '../../../lib/supabase';
+import { useLearnerPreferences } from '../../onboarding/preferences';
 import { colors, fonts, radius, spacing } from '../../../theme/tokens';
 
-const prompt = 'Describe what two people are doing right now in a busy café.';
-
 export function SpeakingPracticeScreen() {
+  const { level, locale } = useLearnerPreferences();
+  const prompt = level === 'A2' ? 'Describe what two people are doing right now in a busy café.' : level === 'B1' ? 'Tell a short story about something unexpected that happened while you were travelling.' : 'Explain how your city would change if public transport were free.';
+  const copy = locale === 'fr' ? { eyebrow: 'PRATIQUE ORALE IA', title: 'Exprimez-vous', hint: 'Utilisez le motif de votre leçon actuelle.', recording: 'Enregistrement', ready: 'Enregistrement prêt', start: 'Appuyez pour commencer', evaluate: 'Évaluer mon expression', evaluating: 'Évaluation…', feedback: 'Retour IA', permissionTitle: 'Microphone requis', permissionBody: 'Autorisez le microphone pour pratiquer votre expression orale.', unavailable: 'Évaluation indisponible', retry: 'Veuillez réessayer.' } : { eyebrow: 'AI SPEAKING PRACTICE', title: 'Express yourself', hint: 'Use the pattern from your current lesson.', recording: 'Recording', ready: 'Recording ready', start: 'Tap to begin', evaluate: 'Evaluate my speaking', evaluating: 'Evaluating…', feedback: 'AI feedback', permissionTitle: 'Microphone required', permissionBody: 'Allow microphone access to practise speaking.', unavailable: 'Evaluation unavailable', retry: 'Please try again.' };
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const status = useAudioRecorderState(recorder, 250);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
@@ -20,7 +22,7 @@ export function SpeakingPracticeScreen() {
 
   const start = async () => {
     const permission = await requestRecordingPermissionsAsync();
-    if (!permission.granted) return Alert.alert('Microphone requis', 'Autorisez le microphone pour pratiquer votre expression orale.');
+    if (!permission.granted) return Alert.alert(copy.permissionTitle, copy.permissionBody);
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
     await recorder.prepareToRecordAsync();
     recorder.record();
@@ -51,18 +53,18 @@ export function SpeakingPracticeScreen() {
       if (error) throw error;
       setFeedback(data.feedback as Record<string, unknown>);
     } catch (error) {
-      Alert.alert('Évaluation indisponible', error instanceof Error ? error.message : 'Veuillez réessayer.');
+      Alert.alert(copy.unavailable, error instanceof Error ? error.message : copy.retry);
     } finally { setEvaluating(false); }
   };
 
   return <SafeAreaView style={styles.safeArea}><View style={styles.container}>
-    <Text style={styles.eyebrow}>PRATIQUE ORALE IA</Text><Text style={styles.title}>Décrivez la scène</Text>
-    <View style={styles.promptCard}><Text style={styles.prompt}>{prompt}</Text><Text style={styles.hint}>Utilisez le motif découvert : am / is / are + verbe-ing.</Text></View>
+    <Text style={styles.eyebrow}>{copy.eyebrow}</Text><Text style={styles.title}>{copy.title}</Text>
+    <View style={styles.promptCard}><Text style={styles.prompt}>{prompt}</Text><Text style={styles.hint}>{copy.hint}</Text></View>
     <View style={[styles.wave, status.isRecording && styles.waveActive]}><Waves color={status.isRecording ? colors.onPrimary : colors.primary} size={70} /></View>
-    <Text accessibilityLiveRegion="polite" style={styles.stateText}>{status.isRecording ? `Enregistrement • ${Math.floor(status.durationMillis / 1000)} s` : recordingUri ? 'Enregistrement prêt' : 'Appuyez pour commencer'}</Text>
+    <Text accessibilityLiveRegion="polite" style={styles.stateText}>{status.isRecording ? `${copy.recording} • ${Math.floor(status.durationMillis / 1000)} s` : recordingUri ? copy.ready : copy.start}</Text>
     <Pressable accessibilityRole="button" onPress={() => void (status.isRecording ? stop() : start())} style={[styles.recordButton, status.isRecording && styles.stopButton]}>{status.isRecording ? <Square color={colors.onPrimary} fill={colors.onPrimary} size={28} /> : <Mic color={colors.onPrimary} size={32} />}</Pressable>
-    {recordingUri ? <Pressable accessibilityRole="button" disabled={evaluating || !env.isSupabaseConfigured} onPress={() => void evaluate()} style={styles.evaluateButton}><Text style={styles.evaluateText}>{evaluating ? 'Évaluation…' : 'Évaluer mon expression'}</Text></Pressable> : null}
-    {feedback ? <View style={styles.feedback}><Text style={styles.feedbackTitle}>Retour IA • {String(feedback.score ?? '—')}/100</Text><Text style={styles.feedbackText}>{String(feedback.encouragement ?? feedback.grammar ?? '')}</Text></View> : null}
+    {recordingUri ? <Pressable accessibilityRole="button" disabled={evaluating || !env.isSupabaseConfigured} onPress={() => void evaluate()} style={styles.evaluateButton}><Text style={styles.evaluateText}>{evaluating ? copy.evaluating : copy.evaluate}</Text></Pressable> : null}
+    {feedback ? <View style={styles.feedback}><Text style={styles.feedbackTitle}>{copy.feedback} • {String(feedback.score ?? '—')}/100</Text><Text style={styles.feedbackText}>{String(feedback.encouragement ?? feedback.grammar ?? '')}</Text></View> : null}
   </View></SafeAreaView>;
 }
 

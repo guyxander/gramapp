@@ -8,6 +8,8 @@ import { env } from '../../config/env';
 import { WelcomeScreen } from '../../features/auth/screens/WelcomeScreen';
 import { AdminDashboardScreen } from '../../features/admin/screens/AdminDashboardScreen';
 import { TutorDashboardScreen } from '../../features/tutors/screens/TutorDashboardScreen';
+import { LearnerOnboardingScreen } from '../../features/onboarding/screens/LearnerOnboardingScreen';
+import { LearnerPreferencesProvider, type LearnerPreferences } from '../../features/onboarding/preferences';
 import { LearnerNavigator } from './LearnerNavigator';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../theme/tokens';
@@ -25,6 +27,8 @@ export function AppNavigator() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(!env.isSupabaseConfigured);
   const [role, setRole] = useState<AppRole>('learner');
+  const [preferences, setPreferences] = useState<LearnerPreferences>({ locale: 'fr', level: 'A2' });
+  const [onboardingComplete, setOnboardingComplete] = useState(!env.isSupabaseConfigured);
   const [roleReady, setRoleReady] = useState(!env.isSupabaseConfigured);
 
   useEffect(() => {
@@ -43,14 +47,24 @@ export function AppNavigator() {
     if (!session) { setRole('learner'); setRoleReady(true); return; }
     setRoleReady(false);
     let active = true;
-    void supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
+    void supabase.from('profiles').select('role,locale,level,onboarding_completed_at').eq('id', session.user.id).single().then(({ data }) => {
       if (active) {
         if (data?.role) setRole(data.role as AppRole);
+        if (data?.locale && data?.level) setPreferences({ locale: data.locale as LearnerPreferences['locale'], level: data.level as LearnerPreferences['level'] });
+        setOnboardingComplete(Boolean(data?.onboarding_completed_at));
         setRoleReady(true);
       }
     });
     return () => { active = false; };
   }, [session]);
+
+  const completeOnboarding = async (nextPreferences: LearnerPreferences) => {
+    if (!session) return;
+    const { error } = await supabase.from('profiles').update({ ...nextPreferences, onboarding_completed_at: new Date().toISOString() }).eq('id', session.user.id);
+    if (error) throw error;
+    setPreferences(nextPreferences);
+    setOnboardingComplete(true);
+  };
 
   if (!ready || (session && !roleReady)) {
     return <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /></View>;
@@ -63,8 +77,14 @@ export function AppNavigator() {
           <Stack.Screen component={TutorDashboardScreen} name="TutorApp" />
         ) : session && role !== 'learner' ? (
           <Stack.Screen component={AdminDashboardScreen} name="AdminApp" />
+        ) : session && !onboardingComplete ? (
+          <Stack.Screen name="LearnerApp">
+            {() => <LearnerOnboardingScreen onComplete={completeOnboarding} />}
+          </Stack.Screen>
         ) : session ? (
-          <Stack.Screen component={LearnerNavigator} name="LearnerApp" />
+          <Stack.Screen name="LearnerApp">
+            {() => <LearnerPreferencesProvider value={preferences}><LearnerNavigator /></LearnerPreferencesProvider>}
+          </Stack.Screen>
         ) : (
           <Stack.Screen name="Welcome">
             {() => <WelcomeScreen onSignedIn={() => undefined} />}

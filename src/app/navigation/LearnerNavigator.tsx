@@ -7,6 +7,7 @@ import { LessonDiscoveryScreen } from '../../features/lessons/screens/LessonDisc
 import { LearnerProfileScreen } from '../../features/profile/screens/LearnerProfileScreen';
 import { SpeakingPracticeScreen } from '../../features/speaking/screens/SpeakingPracticeScreen';
 import { TutorDiscoveryScreen } from '../../features/tutors/screens/TutorDiscoveryScreen';
+import { useLearnerPreferences } from '../../features/onboarding/preferences';
 import { colors, fonts } from '../../theme/tokens';
 
 export type LearnerStackParamList = { LearnerTabs: undefined; LessonDiscovery: undefined };
@@ -16,6 +17,10 @@ const Stack = createNativeStackNavigator<LearnerStackParamList>();
 const Tabs = createBottomTabNavigator<LearnerTabParamList>();
 
 function LearnerTabs() {
+  const { locale } = useLearnerPreferences();
+  const labels = locale === 'fr'
+    ? { learn: 'Apprendre', practice: 'Pratique', tutors: 'Tuteurs', profile: 'Profil' }
+    : { learn: 'Learn', practice: 'Practice', tutors: 'Tutors', profile: 'Profile' };
   return (
     <Tabs.Navigator
       screenOptions={{
@@ -31,22 +36,22 @@ function LearnerTabs() {
       <Tabs.Screen
         component={LearnerDashboardScreen}
         name="Learn"
-        options={{ tabBarIcon: ({ color, size }) => <BookOpenCheck color={color} size={size} />, title: 'Apprendre' }}
+        options={{ tabBarIcon: ({ color, size }) => <BookOpenCheck color={color} size={size} />, title: labels.learn }}
       />
       <Tabs.Screen
         component={SpeakingPracticeScreen}
         name="Practice"
-        options={{ tabBarIcon: ({ color, size }) => <Mic2 color={color} size={size} />, title: 'Pratique' }}
+        options={{ tabBarIcon: ({ color, size }) => <Mic2 color={color} size={size} />, title: labels.practice }}
       />
       <Tabs.Screen
         component={TutorDiscoveryScreen}
         name="Tutors"
-        options={{ tabBarIcon: ({ color, size }) => <UsersRound color={color} size={size} />, title: 'Tuteurs' }}
+        options={{ tabBarIcon: ({ color, size }) => <UsersRound color={color} size={size} />, title: labels.tutors }}
       />
       <Tabs.Screen
         component={LearnerProfileScreen}
         name="Profile"
-        options={{ tabBarIcon: ({ color, size }) => <UserRound color={color} size={size} />, title: 'Profil' }}
+        options={{ tabBarIcon: ({ color, size }) => <UserRound color={color} size={size} />, title: labels.profile }}
       />
     </Tabs.Navigator>
   );
