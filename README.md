@@ -35,7 +35,7 @@ Android-first, iOS-ready React Native application for inductive English grammar 
 4. Run `npm start` or `npm run android`.
 5. Run `npm run release:check` before submitting changes.
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for hosted Supabase, secrets, Paystack, cron, and EAS release setup. Legal drafts are in `docs/` and must be completed with the launch entity and jurisdiction before publication.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for hosted Supabase, secrets, Paystack, cron, and EAS release setup. The official legal notices identify Nadbooks Ventures and are published with the production site.
 
 ## Guardrails
 
