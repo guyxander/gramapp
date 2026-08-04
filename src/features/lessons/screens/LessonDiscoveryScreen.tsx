@@ -89,7 +89,7 @@ export function LessonDiscoveryScreen({ navigation }: Props) {
         </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle}>{lesson.title}</Text>
-          <Text style={styles.headerTime}>07:30 restantes</Text>
+          <Text style={styles.headerTime}>{locale === 'fr' ? '07:30 restantes' : '07:30 remaining'}</Text>
         </View>
       </View>
 

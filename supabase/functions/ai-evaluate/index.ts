@@ -38,9 +38,10 @@ export default {
 
     if (!aiResponse.ok) return Response.json({ error: 'AI provider unavailable' }, { status: 502 })
     const result = await aiResponse.json()
-    const content = result.choices?.[0]?.message?.content
+    const content = String(result.choices?.[0]?.message?.content ?? '')
+    const normalized = content.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
     let feedback: unknown
-    try { feedback = JSON.parse(content) } catch { feedback = { encouragement: String(content ?? '') } }
+    try { feedback = JSON.parse(normalized) } catch { feedback = { encouragement: normalized } }
 
     if (payload.attemptId) {
       await ctx.supabaseAdmin.from('lesson_attempts').update({ ai_feedback: feedback })

@@ -10,7 +10,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
         <BookOpenCheck color={colors.onPrimary} size={compact ? 20 : 25} strokeWidth={2.4} />
       </View>
       <Text style={[styles.wordmark, compact && styles.wordmarkCompact]}>
-        Grammar<Text style={styles.wordmarkAccent}>Discovery</Text>
+        Gram<Text style={styles.wordmarkAccent}>App</Text>
       </Text>
     </View>
   );

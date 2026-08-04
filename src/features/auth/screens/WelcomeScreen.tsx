@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Compass, Search, Sparkles } from 'lucide-react-native';
 
 import { BrandMark } from '../../../components/BrandMark';
 import { colors, fonts, radius, spacing } from '../../../theme/tokens';
 import { signInWithGoogle } from '../services/googleAuth';
+import { env } from '../../../config/env';
 
 type Props = { onSignedIn: () => void };
 
@@ -22,6 +23,13 @@ export function WelcomeScreen({ onSignedIn }: Props) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openLegalPage = async (page: 'terms' | 'privacy') => {
+    const base = env.officialSiteUrl.replace(/\/$/, '');
+    if (!base) return Alert.alert('Lien indisponible', 'Le site officiel n’est pas configuré.');
+    try { await Linking.openURL(`${base}/${page}`); }
+    catch { Alert.alert('Lien indisponible', 'Impossible d’ouvrir cette page pour le moment.'); }
   };
 
   return (
@@ -61,9 +69,7 @@ export function WelcomeScreen({ onSignedIn }: Props) {
             <View style={styles.googleBadge}><Text style={styles.googleLetter}>G</Text></View>
             <Text style={styles.googleButtonText}>{loading ? 'Connexion…' : 'Continuer avec Google'}</Text>
           </Pressable>
-          <Text style={styles.legal}>
-            En continuant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.
-          </Text>
+          <Text style={styles.legal}>En continuant, vous acceptez nos{' '}<Text accessibilityRole="link" onPress={() => void openLegalPage('terms')} style={styles.legalLink}>Conditions d'utilisation</Text>{' '}et notre{' '}<Text accessibilityRole="link" onPress={() => void openLegalPage('privacy')} style={styles.legalLink}>Politique de confidentialité</Text>.</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -92,4 +98,5 @@ const styles = StyleSheet.create({
   googleLetter: { color: '#4285F4', fontFamily: fonts.bold, fontSize: 17 },
   googleButtonText: { color: colors.onPrimary, fontFamily: fonts.semibold, fontSize: 16 },
   legal: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12, lineHeight: 18, paddingHorizontal: spacing.sm, textAlign: 'center' },
+  legalLink: { color: colors.primaryDark, fontFamily: fonts.semibold, textDecorationLine: 'underline' },
 });

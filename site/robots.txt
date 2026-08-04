@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://gramapp-two.vercel.app/
+Sitemap: https://gramapp.vercel.app/

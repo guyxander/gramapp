@@ -1,0 +1,12 @@
+create index if not exists assistance_requests_learner_idx on public.assistance_requests (learner_id);
+create index if not exists conversation_messages_request_idx on public.conversation_messages (request_id);
+create index if not exists conversation_messages_sender_idx on public.conversation_messages (sender_id);
+create index if not exists lesson_attempts_lesson_idx on public.lesson_attempts (lesson_id);
+create index if not exists lessons_created_by_idx on public.lessons (created_by);
+create index if not exists moderation_flags_message_idx on public.moderation_flags (message_id);
+create index if not exists moderation_flags_reviewed_by_idx on public.moderation_flags (reviewed_by);
+create index if not exists speaking_attempts_user_idx on public.speaking_attempts (user_id);
+create index if not exists subscriptions_plan_idx on public.subscriptions (plan_id);
+create index if not exists tutor_comments_learner_idx on public.tutor_comments (learner_id);
+create index if not exists tutor_comments_tutor_idx on public.tutor_comments (tutor_id);
+create index if not exists user_achievements_achievement_idx on public.user_achievements (achievement_id);

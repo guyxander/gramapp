@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Square, Waves } from 'lucide-react-native';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
+import { File } from 'expo-file-system';
 
 import { env } from '../../../config/env';
 import { supabase } from '../../../lib/supabase';
@@ -12,7 +13,7 @@ import { colors, fonts, radius, spacing } from '../../../theme/tokens';
 export function SpeakingPracticeScreen() {
   const { level, locale } = useLearnerPreferences();
   const prompt = level === 'A2' ? 'Describe what two people are doing right now in a busy café.' : level === 'B1' ? 'Tell a short story about something unexpected that happened while you were travelling.' : 'Explain how your city would change if public transport were free.';
-  const copy = locale === 'fr' ? { eyebrow: 'PRATIQUE ORALE IA', title: 'Exprimez-vous', hint: 'Utilisez le motif de votre leçon actuelle.', recording: 'Enregistrement', ready: 'Enregistrement prêt', start: 'Appuyez pour commencer', evaluate: 'Évaluer mon expression', evaluating: 'Évaluation…', feedback: 'Retour IA', permissionTitle: 'Microphone requis', permissionBody: 'Autorisez le microphone pour pratiquer votre expression orale.', unavailable: 'Évaluation indisponible', retry: 'Veuillez réessayer.' } : { eyebrow: 'AI SPEAKING PRACTICE', title: 'Express yourself', hint: 'Use the pattern from your current lesson.', recording: 'Recording', ready: 'Recording ready', start: 'Tap to begin', evaluate: 'Evaluate my speaking', evaluating: 'Evaluating…', feedback: 'AI feedback', permissionTitle: 'Microphone required', permissionBody: 'Allow microphone access to practise speaking.', unavailable: 'Evaluation unavailable', retry: 'Please try again.' };
+  const copy = locale === 'fr' ? { eyebrow: 'PRATIQUE ORALE IA', title: 'Exprimez-vous', hint: 'Utilisez le motif de votre leçon actuelle.', recording: 'Enregistrement', ready: 'Enregistrement prêt', start: 'Appuyez pour commencer', startLabel: 'Commencer l’enregistrement', stopLabel: 'Arrêter l’enregistrement', evaluate: 'Évaluer mon expression', evaluating: 'Évaluation…', feedback: 'Retour IA', permissionTitle: 'Microphone requis', permissionBody: 'Autorisez le microphone pour pratiquer votre expression orale.', unavailable: 'Évaluation indisponible', audioUnavailable: 'Votre enregistrement a été sauvegardé, mais le retour audio IA est temporairement indisponible.', retry: 'Veuillez réessayer.' } : { eyebrow: 'AI SPEAKING PRACTICE', title: 'Express yourself', hint: 'Use the pattern from your current lesson.', recording: 'Recording', ready: 'Recording ready', start: 'Tap to begin', startLabel: 'Start recording', stopLabel: 'Stop recording', evaluate: 'Evaluate my speaking', evaluating: 'Evaluating…', feedback: 'AI feedback', permissionTitle: 'Microphone required', permissionBody: 'Allow microphone access to practise speaking.', unavailable: 'Evaluation unavailable', audioUnavailable: 'Your recording was saved, but AI audio feedback is temporarily unavailable.', retry: 'Please try again.' };
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const status = useAudioRecorderState(recorder, 250);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
@@ -43,17 +44,27 @@ export function SpeakingPracticeScreen() {
       setEvaluating(true);
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw new Error('Session expirée.');
-      const path = `${auth.user.id}/${crypto.randomUUID()}.m4a`;
-      const blob = await (await fetch(recordingUri)).blob();
-      const { error: uploadError } = await supabase.storage.from('speaking-audio').upload(path, blob, { contentType: 'audio/m4a' });
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+      const path = `${auth.user.id}/${uniqueId}.m4a`;
+      const audioBytes = await new File(recordingUri).bytes();
+      const { error: uploadError } = await supabase.storage.from('speaking-audio').upload(path, audioBytes.buffer, { contentType: 'audio/m4a' });
       if (uploadError) throw uploadError;
       const { data: attempt, error: attemptError } = await supabase.from('speaking_attempts').insert({ user_id: auth.user.id, prompt, storage_path: path, duration_ms: Math.max(500, durationMs) }).select('id').single();
       if (attemptError) throw attemptError;
       const { data, error } = await supabase.functions.invoke('speaking-evaluate', { body: { attemptId: attempt.id } });
-      if (error) throw error;
+      if (error) {
+        let message = error.message;
+        const context = 'context' in error ? error.context : null;
+        if (context && typeof (context as { json?: unknown }).json === 'function') {
+          const body = await (context as { json: () => Promise<unknown> }).json().catch(() => null) as { error?: string } | null;
+          if (body?.error) message = body.error;
+        }
+        throw new Error(message);
+      }
       setFeedback(data.feedback as Record<string, unknown>);
     } catch (error) {
-      Alert.alert(copy.unavailable, error instanceof Error ? error.message : copy.retry);
+      const message = error instanceof Error ? error.message : copy.retry;
+      Alert.alert(copy.unavailable, message.includes('balance for audio') ? copy.audioUnavailable : message);
     } finally { setEvaluating(false); }
   };
 
@@ -62,7 +73,7 @@ export function SpeakingPracticeScreen() {
     <View style={styles.promptCard}><Text style={styles.prompt}>{prompt}</Text><Text style={styles.hint}>{copy.hint}</Text></View>
     <View style={[styles.wave, status.isRecording && styles.waveActive]}><Waves color={status.isRecording ? colors.onPrimary : colors.primary} size={70} /></View>
     <Text accessibilityLiveRegion="polite" style={styles.stateText}>{status.isRecording ? `${copy.recording} • ${Math.floor(status.durationMillis / 1000)} s` : recordingUri ? copy.ready : copy.start}</Text>
-    <Pressable accessibilityRole="button" onPress={() => void (status.isRecording ? stop() : start())} style={[styles.recordButton, status.isRecording && styles.stopButton]}>{status.isRecording ? <Square color={colors.onPrimary} fill={colors.onPrimary} size={28} /> : <Mic color={colors.onPrimary} size={32} />}</Pressable>
+    <Pressable accessibilityLabel={status.isRecording ? copy.stopLabel : copy.startLabel} accessibilityRole="button" onPress={() => void (status.isRecording ? stop() : start())} style={[styles.recordButton, status.isRecording && styles.stopButton]}>{status.isRecording ? <Square color={colors.onPrimary} fill={colors.onPrimary} size={28} /> : <Mic color={colors.onPrimary} size={32} />}</Pressable>
     {recordingUri ? <Pressable accessibilityRole="button" disabled={evaluating || !env.isSupabaseConfigured} onPress={() => void evaluate()} style={styles.evaluateButton}><Text style={styles.evaluateText}>{evaluating ? copy.evaluating : copy.evaluate}</Text></Pressable> : null}
     {feedback ? <View style={styles.feedback}><Text style={styles.feedbackTitle}>{copy.feedback} • {String(feedback.score ?? '—')}/100</Text><Text style={styles.feedbackText}>{String(feedback.encouragement ?? feedback.grammar ?? '')}</Text></View> : null}
   </View></SafeAreaView>;

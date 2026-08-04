@@ -24,15 +24,15 @@ export function LearnerDashboardScreen({ navigation }: Props) {
   };
 
   return <SafeAreaView style={styles.safeArea}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-    <View style={styles.header}><Menu color={colors.text} size={26} /><BrandMark compact /><View style={styles.timePill}><Text style={styles.timeText}>10:00</Text></View></View>
+    <View style={styles.header}><Pressable accessibilityLabel={locale === 'fr' ? 'Ouvrir le profil' : 'Open profile'} accessibilityRole="button" hitSlop={10} onPress={() => navigation.navigate('Profile')}><Menu color={colors.text} size={26} /></Pressable><BrandMark compact /><View style={styles.timePill}><Text style={styles.timeText}>10:00</Text></View></View>
     <View style={styles.greeting}><Text style={styles.title}>{copy.greeting}</Text><Text style={styles.subtitle}>{copy.subtitle}</Text></View>
     <View style={styles.statsRow}><StatCard icon={<Flame color={colors.streak} size={30} />} label={copy.streak} tint="#FFF5F1" value={copy.days} /><StatCard icon={<Star color={colors.xp} fill={colors.xp} size={29} />} label={copy.xp} value="1 250" /></View>
     <View style={styles.lessonCard}>
-      <View style={styles.lessonTopRow}><View style={styles.tag}><Text style={styles.tagText}>{copy.grammar} · {level}</Text></View><View style={styles.searchBadge}><Search color={colors.primaryDark} size={22} /></View></View>
+      <View style={styles.lessonTopRow}><View style={styles.tag}><Text style={styles.tagText}>{copy.grammar} · {level}</Text></View><Pressable accessibilityLabel={locale === 'fr' ? 'Ouvrir la leçon' : 'Open lesson'} accessibilityRole="button" onPress={() => navigation.navigate('LessonDiscovery')} style={styles.searchBadge}><Search color={colors.primaryDark} size={22} /></Pressable></View>
       <Text style={styles.lessonTitle}>{lesson.title}</Text><Text style={styles.lessonDescription}>{lesson.summary}</Text><View style={styles.progressTrack}><View style={styles.progressFill} /></View>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('LessonDiscovery')} style={styles.primaryButton}><Text style={styles.primaryButtonText}>{copy.start}</Text><ChevronRight color={colors.onPrimary} size={21} /></Pressable>
     </View>
-    <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{copy.mastery}</Text><Text style={styles.link}>{copy.seeAll}</Text></View>
+    <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{copy.mastery}</Text><Pressable accessibilityRole="button" hitSlop={10} onPress={() => navigation.navigate('Profile')}><Text style={styles.link}>{copy.seeAll}</Text></Pressable></View>
     <View style={styles.heatmapCard}><View style={styles.heatmapGrid}>{[4, 4, 3, 1, 0, 3, 3, 1, 0, 0].map((value, index) => <View key={index} style={[styles.heatmapCell, { backgroundColor: colors.heatmap[value] }]} />)}</View><View style={styles.legend}><Text style={styles.legendText}>{copy.strengthen}</Text><Text style={styles.legendText}>{copy.mastered}</Text></View></View>
     <View style={styles.quickActions}><Pressable accessibilityRole="button" onPress={() => navigation.navigate('Practice')} style={styles.quickCard}><View style={[styles.quickIcon, { backgroundColor: colors.successSoft }]}><Mic2 color={colors.success} size={25} /></View><Text style={styles.quickLabel}>{copy.speaking}</Text></Pressable><Pressable accessibilityRole="button" onPress={() => navigation.navigate('Tutors')} style={styles.quickCard}><View style={[styles.quickIcon, { backgroundColor: '#F2EAFB' }]}><UserRoundSearch color={colors.discovery} size={25} /></View><Text style={styles.quickLabel}>{copy.tutor}</Text></Pressable></View>
   </ScrollView></SafeAreaView>;
