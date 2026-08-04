@@ -12,6 +12,7 @@ on conflict (id) do update set name = excluded.name, price_minor = excluded.pric
 insert into public.ai_models (id, model_id, purpose, priority, enabled, free_only) values
   ('lesson-primary', 'openrouter/free', 'lesson_generation', 10, true, true),
   ('evaluation-primary', 'openrouter/free', 'production_evaluation', 10, true, true),
+  ('speaking-primary', 'openrouter/free', 'speaking_evaluation', 10, true, true),
   ('report-primary', 'openrouter/free', 'monthly_report', 10, true, true),
   ('moderation-primary', 'openrouter/free', 'contact_exchange_moderation', 10, true, true)
 on conflict (id) do update set model_id = excluded.model_id, purpose = excluded.purpose, priority = excluded.priority, enabled = excluded.enabled, free_only = excluded.free_only;

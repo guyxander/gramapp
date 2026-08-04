@@ -27,13 +27,19 @@ export function AdminDashboardScreen() {
     });
   }, []);
 
+  const toggleFlag = async (flag: Flag) => {
+    const enabled = !flag.enabled;
+    const { error } = await supabase.from('feature_flags').update({ enabled }).eq('key', flag.key);
+    if (!error) setFlags((current) => current.map((item) => item.key === flag.key ? { ...item, enabled } : item));
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}><ScrollView contentContainerStyle={[styles.content, width > 900 && styles.contentWide]}>
       <Text style={styles.eyebrow}>ADMIN SYSTEM</Text><Text style={styles.title}>Vue d’ensemble</Text>
       <View style={styles.metrics}><Metric icon={<BookOpenCheck color={colors.discovery} size={25} />} label="Leçons" value={counts.lessons} /><Metric icon={<Crown color={colors.premium} size={25} />} label="Premium" value={counts.subscriptions} /><Metric icon={<ShieldAlert color={colors.error} size={25} />} label="À modérer" value={counts.moderation} /><Metric icon={<UsersRound color={colors.primary} size={25} />} label="Rôles" value={7} /></View>
       <View style={styles.columns}>
         <View style={styles.panel}><Text style={styles.panelTitle}>Modération contact hors plateforme</Text>{moderation.length ? moderation.map((item) => <View key={item.id} style={styles.moderationRow}><View style={styles.risk}><Text style={styles.riskText}>{item.risk.toUpperCase()}</Text></View><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.reason_code}</Text><Text style={styles.rowBody}>Confiance {Math.round(item.confidence * 100)}%</Text></View></View>) : <Text style={styles.empty}>La file est vide.</Text>}</View>
-        <View style={styles.panel}><Text style={styles.panelTitle}>Feature flags</Text>{flags.map((flag) => <View key={flag.key} style={styles.flagRow}><Text style={styles.flagText}>{flag.key}</Text><Switch disabled value={flag.enabled} /></View>)}</View>
+        <View style={styles.panel}><Text style={styles.panelTitle}>Feature flags</Text>{flags.map((flag) => <View key={flag.key} style={styles.flagRow}><Text style={styles.flagText}>{flag.key}</Text><Switch onValueChange={() => void toggleFlag(flag)} value={flag.enabled} /></View>)}</View>
       </View>
     </ScrollView></SafeAreaView>
   );

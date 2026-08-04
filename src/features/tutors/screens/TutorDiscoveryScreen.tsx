@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Star, UserRoundCheck } from 'lucide-react-native';
 
@@ -16,6 +16,8 @@ const previewTutors: Tutor[] = [
 export function TutorDiscoveryScreen() {
   const [tutors, setTutors] = useState<Tutor[]>(previewTutors);
   const [followed, setFollowed] = useState<string | null>(null);
+  const [subject, setSubject] = useState('Question sur ma leçon');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!env.isSupabaseConfigured) return;
@@ -31,6 +33,15 @@ export function TutorDiscoveryScreen() {
     if (!user.user) return;
     await supabase.from('tutor_follows').upsert({ learner_id: user.user.id, tutor_id: tutorId });
     setFollowed(tutorId);
+  };
+
+  const requestHelp = async () => {
+    if (!followed || followed.startsWith('preview-') || !message.trim()) return;
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
+    const { error } = await supabase.from('assistance_requests').insert({ learner_id: auth.user.id, tutor_id: followed, subject: subject.trim(), body: message.trim() });
+    if (error) Alert.alert('Envoi impossible', error.message);
+    else { setMessage(''); Alert.alert('Demande envoyée', 'Votre tuteur peut maintenant vous répondre dans cet espace.'); }
   };
 
   return (
@@ -54,6 +65,12 @@ export function TutorDiscoveryScreen() {
             </Pressable>
           </View>
         ))}
+        <Text style={styles.sectionTitle}>Demander de l’aide</Text>
+        <View style={styles.helpCard}>
+          <TextInput accessibilityLabel="Sujet" onChangeText={setSubject} placeholder="Sujet" style={styles.input} value={subject} />
+          <TextInput accessibilityLabel="Message" multiline onChangeText={setMessage} placeholder="Expliquez ce qui vous bloque…" style={[styles.input, styles.messageInput]} value={message} />
+          <Pressable accessibilityRole="button" disabled={!followed || !message.trim()} onPress={() => void requestHelp()} style={styles.send}><Text style={styles.sendText}>Envoyer au tuteur</Text></Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -78,4 +95,5 @@ const styles = StyleSheet.create({
   followed: { backgroundColor: colors.successSoft },
   followText: { color: colors.onPrimary, fontFamily: fonts.semibold, fontSize: 14 },
   followedText: { color: colors.success },
+  sectionTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 22, marginTop: spacing.md }, helpCard: { backgroundColor: colors.surface, borderColor: colors.outline, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, padding: spacing.lg }, input: { borderColor: colors.outline, borderRadius: radius.md, borderWidth: 1, color: colors.text, fontFamily: fonts.regular, minHeight: 48, padding: spacing.md }, messageInput: { minHeight: 110, textAlignVertical: 'top' }, send: { alignItems: 'center', backgroundColor: colors.primary, borderRadius: radius.pill, justifyContent: 'center', minHeight: 48 }, sendText: { color: colors.onPrimary, fontFamily: fonts.semibold },
 });
