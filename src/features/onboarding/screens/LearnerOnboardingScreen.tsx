@@ -43,7 +43,7 @@ export function LearnerOnboardingScreen({ onComplete }: Props) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.hero}>
-          <Text style={styles.eyebrow}>GRAMMAR DISCOVERY</Text>
+          <Text style={styles.eyebrow}>GRAMAPP</Text>
           <Text style={styles.title}>{french ? 'Personnalisez votre parcours' : 'Personalize your learning path'}</Text>
           <Text style={styles.subtitle}>{french ? 'Ces choix déterminent la langue de l’application et les leçons proposées.' : 'These choices determine the app language and the lessons you receive.'}</Text>
         </View>

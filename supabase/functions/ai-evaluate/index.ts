@@ -24,7 +24,7 @@ export default {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': Deno.env.get('OFFICIAL_SITE_URL') ?? 'https://example.invalid',
-        'X-Title': 'Grammar Discovery',
+        'X-Title': 'GramApp',
       },
       body: JSON.stringify({
         model: modelId,

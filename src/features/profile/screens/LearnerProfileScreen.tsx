@@ -48,7 +48,7 @@ export function LearnerProfileScreen() {
       return;
     }
     const base = env.officialSiteUrl;
-    await Share.share({ message: `Découvrez Grammar Discovery avec moi : ${base}/r/${profile.referral_code ?? ''}` });
+    await Share.share({ message: `Découvrez GramApp avec moi : ${base}/r/${profile.referral_code ?? ''}` });
   };
 
   const startCheckout = async () => {

@@ -20,7 +20,7 @@ export default {
     const { data: configured } = await ctx.supabaseAdmin.from('ai_models').select('model_id').eq('purpose', 'speaking_evaluation').eq('enabled', true).eq('free_only', true).order('priority').limit(1).maybeSingle()
     const provider = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': Deno.env.get('OFFICIAL_SITE_URL') ?? 'https://example.invalid', 'X-Title': 'Grammar Discovery' },
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': Deno.env.get('OFFICIAL_SITE_URL') ?? 'https://example.invalid', 'X-Title': 'GramApp' },
       body: JSON.stringify({ model: configured?.model_id ?? 'openrouter/free', response_format: { type: 'json_object' }, messages: [
         { role: 'system', content: 'Evaluate A2-B2 spoken English. Return JSON: transcript, score, pronunciation, grammar, strengths, improvements, encouragement. Keep French explanations short.' },
         { role: 'user', content: [{ type: 'text', text: attempt.prompt }, { type: 'input_audio', input_audio: { data: bytesToBase64(new Uint8Array(await audio.arrayBuffer())), format: 'm4a' } }] },

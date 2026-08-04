@@ -1,4 +1,4 @@
-# Grammar Discovery
+# GramApp
 
 Android-first, iOS-ready React Native application for inductive English grammar learning by French-speaking A2-B2 learners.
 
