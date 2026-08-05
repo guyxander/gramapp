@@ -21,6 +21,55 @@ export type LessonContent = {
   rewards: { completionXp: number; perfectPracticeBonusXp: number };
 };
 
+export const CURRICULUM_LENGTH_DAYS = 180;
+
+const contexts: Record<CefrLevel, readonly string[]> = {
+  A2: ['at the park', 'at home', 'in a classroom', 'at a market', 'on a bus', 'at a sports centre'],
+  B1: ['during a journey', 'at work', 'at a celebration', 'during a storm', 'in a new city', 'on a school trip'],
+  B2: ['in a city debate', 'at a planning meeting', 'in an editorial', 'during an interview', 'in a policy proposal', 'in a community forum'],
+};
+
+const phases = {
+  en: ['guided discovery', 'meaning check', 'form focus', 'contrast practice', 'real-life application', 'mastery review'],
+  fr: ['découverte guidée', 'vérification du sens', 'étude de la forme', 'pratique contrastive', 'application réelle', 'révision de maîtrise'],
+} as const;
+
+type GrammarFocus = {
+  title: Record<AppLocale, string>;
+  formula: string;
+  samples: readonly [string, string, string];
+  practice: string;
+  options: readonly [string, string, string];
+  correct: string;
+};
+
+const focuses: Record<CefrLevel, readonly GrammarFocus[]> = {
+  A2: [
+    { title: { en: 'Present actions', fr: 'Actions au présent' }, formula: 'am/is/are + verb-ing', samples: ['Mina is reading near the window.', 'The children are drawing a map.', 'I am waiting for the bus.'], practice: 'My brother ___ dinner now.', options: ['cooks', 'is cooking', 'cooked'], correct: 'is cooking' },
+    { title: { en: 'Everyday routines', fr: 'Habitudes quotidiennes' }, formula: 'subject + present simple', samples: ['Mina reads every evening.', 'The shop opens at nine.', 'We walk to school on Mondays.'], practice: 'My brother ___ dinner every Sunday.', options: ['cooks', 'is cooking', 'cooked'], correct: 'cooks' },
+    { title: { en: 'Past events', fr: 'Événements passés' }, formula: 'subject + past simple', samples: ['Mina visited Abuja yesterday.', 'The shop opened late.', 'We walked home after class.'], practice: 'My brother ___ dinner yesterday.', options: ['cooks', 'is cooking', 'cooked'], correct: 'cooked' },
+    { title: { en: 'Plans with going to', fr: 'Projets avec going to' }, formula: 'am/is/are + going to + verb', samples: ['Mina is going to study tonight.', 'They are going to buy fruit.', 'I am going to call my aunt.'], practice: 'We ___ visit the museum tomorrow.', options: ['are going to', 'went to', 'going'], correct: 'are going to' },
+    { title: { en: 'Comparing things', fr: 'Comparer des choses' }, formula: 'comparative + than', samples: ['This road is quieter than that one.', 'A train is faster than a bus.', 'Today is hotter than yesterday.'], practice: 'This bag is ___ than mine.', options: ['heavy', 'heavier', 'heaviest'], correct: 'heavier' },
+    { title: { en: 'Countable quantities', fr: 'Quantités dénombrables' }, formula: 'many/few + plural noun', samples: ['There are many books here.', 'We have a few questions.', 'How many apples do you need?'], practice: 'How ___ chairs are in the room?', options: ['much', 'many', 'any'], correct: 'many' },
+  ],
+  B1: [
+    { title: { en: 'Past actions in progress', fr: 'Actions passées en cours' }, formula: 'was/were + verb-ing + when', samples: ['I was walking when it rained.', 'They were eating when I called.', 'Maya was sleeping when we arrived.'], practice: 'We ___ dinner when the lights went out.', options: ['ate', 'were eating', 'are eating'], correct: 'were eating' },
+    { title: { en: 'Present perfect experience', fr: 'Expérience au present perfect' }, formula: 'have/has + past participle', samples: ['I have visited Accra twice.', 'She has never tried sushi.', 'They have already finished.'], practice: 'She ___ that film before.', options: ['has seen', 'saw', 'sees'], correct: 'has seen' },
+    { title: { en: 'First conditional', fr: 'Premier conditionnel' }, formula: 'if + present, will + verb', samples: ['If it rains, we will stay home.', 'If you call, I will answer.', 'They will win if they practise.'], practice: 'If I finish early, I ___ you.', options: ['called', 'will call', 'would call'], correct: 'will call' },
+    { title: { en: 'Defining relative clauses', fr: 'Propositions relatives' }, formula: 'noun + who/which/that + clause', samples: ['The woman who teaches us is kind.', 'The book that I bought is useful.', 'This is the bus which goes downtown.'], practice: 'The man ___ lives next door is a doctor.', options: ['who', 'where', 'whose'], correct: 'who' },
+    { title: { en: 'Present passive', fr: 'Passif au présent' }, formula: 'am/is/are + past participle', samples: ['Coffee is grown here.', 'The rooms are cleaned daily.', 'English is spoken worldwide.'], practice: 'These phones ___ in Korea.', options: ['make', 'are made', 'made'], correct: 'are made' },
+    { title: { en: 'Modals of deduction', fr: 'Modaux de déduction' }, formula: 'must/might/can’t + verb', samples: ['She must be tired.', 'They might know the answer.', 'That cannot be the right train.'], practice: 'The lights are off; they ___ be asleep.', options: ['must', 'should to', 'are'], correct: 'must' },
+  ],
+  B2: [
+    { title: { en: 'Mixed conditionals', fr: 'Conditionnels mixtes' }, formula: 'if + past perfect, would + verb', samples: ['If I had studied law, I would be a lawyer now.', 'If she had left earlier, she would be here.', 'We would know if we had listened.'], practice: 'If I had accepted the job, I ___ abroad now.', options: ['work', 'would be working', 'will work'], correct: 'would be working' },
+    { title: { en: 'Inversion for emphasis', fr: 'Inversion emphatique' }, formula: 'negative adverb + auxiliary + subject', samples: ['Never have I seen such rain.', 'Rarely do they arrive late.', 'Only then did she understand.'], practice: 'Rarely ___ such a clear argument.', options: ['we hear', 'do we hear', 'we heard'], correct: 'do we hear' },
+    { title: { en: 'Cleft sentences', fr: 'Phrases clivées' }, formula: 'it is/was + focus + that/who', samples: ['It was Maya who solved it.', 'It is patience that matters.', 'What I need is more time.'], practice: 'It was the final example ___ convinced me.', options: ['that', 'what', 'where'], correct: 'that' },
+    { title: { en: 'Participle clauses', fr: 'Propositions participiales' }, formula: 'verb-ing/past participle + main clause', samples: ['Knowing the risks, she agreed.', 'Built in 1920, the house is protected.', 'Having finished, they left.'], practice: '___ the report, he sent it to the team.', options: ['Having completed', 'He completed', 'Completes'], correct: 'Having completed' },
+    { title: { en: 'Past modal deduction', fr: 'Déduction modale au passé' }, formula: 'must/might/can’t have + participle', samples: ['She must have forgotten.', 'They might have missed the train.', 'He cannot have seen us.'], practice: 'The door is open; someone ___ left early.', options: ['must have', 'must', 'has must'], correct: 'must have' },
+    { title: { en: 'Reporting verbs', fr: 'Verbes de discours rapporté' }, formula: 'reporting verb + to-infinitive/verb-ing/that', samples: ['She admitted taking the file.', 'He advised us to wait.', 'They insisted that we stay.'], practice: 'The guide advised us ___ water.', options: ['bring', 'to bring', 'bringing us'], correct: 'to bring' },
+  ],
+};
+
 const lessons: Record<CefrLevel, Record<AppLocale, LessonContent>> = {
   A2: {
     en: {
@@ -72,6 +121,28 @@ const lessons: Record<CefrLevel, Record<AppLocale, LessonContent>> = {
   },
 };
 
-export function getLesson(level: CefrLevel, locale: AppLocale) {
-  return lessons[level][locale];
+export function getLesson(level: CefrLevel, locale: AppLocale, dayIndex = 0): LessonContent {
+  const normalizedIndex = Math.max(0, Math.min(CURRICULUM_LENGTH_DAYS - 1, Math.floor(dayIndex)));
+  const source = lessons[level][locale];
+  const focus = focuses[level][normalizedIndex % focuses[level].length];
+  const cycle = Math.floor(normalizedIndex / contexts[level].length) + 1;
+  const context = contexts[level][normalizedIndex % contexts[level].length];
+  const phase = phases[locale][normalizedIndex % phases[locale].length];
+  const day = normalizedIndex + 1;
+  return {
+    ...source,
+    id: `${source.id}-day-${day}`,
+    title: `${focus.title[locale]} · ${locale === 'fr' ? 'Jour' : 'Day'} ${day}`,
+    summary: `${source.summary} ${locale === 'fr' ? 'Parcours' : 'Focus'}: ${phase}.`,
+    context: `${source.context} · ${context}`,
+    sceneTitle: `${source.sceneTitle} ${locale === 'fr' ? 'Cycle' : 'Cycle'} ${cycle}`,
+    examples: focus.samples.map((sample) => ({ subject: '', action: sample, detail: '' })),
+    noticeQuestion: locale === 'fr' ? 'Quelle structure grammaticale relie ces exemples ?' : 'Which grammar pattern connects these examples?',
+    noticeOptions: [{ id: 'target', label: focus.formula }, { id: 'decoy-one', label: 'subject + infinitive only' }, { id: 'decoy-two', label: 'will + past participle' }],
+    correctNoticeId: 'target',
+    discovery: locale === 'fr' ? `Le motif découvert est : ${focus.formula}. Observez le sens avant d’appliquer la forme.` : `The discovered pattern is: ${focus.formula}. Notice the meaning before applying the form.`,
+    formula: [focus.formula, locale === 'fr' ? 'sens + contexte' : 'meaning + context'],
+    practice: { prompt: focus.practice, options: focus.options.map((label, optionIndex) => ({ id: `option-${optionIndex}`, label })), correctOptionId: `option-${focus.options.indexOf(focus.correct)}`, explanation: locale === 'fr' ? `La réponse correcte suit le motif ${focus.formula}.` : `The correct answer follows the ${focus.formula} pattern.` },
+    production: { ...source.production, prompt: locale === 'fr' ? `Écrivez deux phrases originales avec le motif « ${focus.formula} ».` : `Write two original sentences using the “${focus.formula}” pattern.` },
+  };
 }

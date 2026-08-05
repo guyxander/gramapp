@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Square, Waves } from 'lucide-react-native';
+import { Crown, LockKeyhole, Mic, RefreshCw, Square, Waves } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import { File } from 'expo-file-system';
 
@@ -11,6 +12,41 @@ import { useLearnerPreferences } from '../../onboarding/preferences';
 import { colors, fonts, radius, spacing } from '../../../theme/tokens';
 
 export function SpeakingPracticeScreen() {
+  const { locale } = useLearnerPreferences();
+  const [entitlement, setEntitlement] = useState<'loading' | 'premium' | 'free' | 'error'>('loading');
+
+  const refreshEntitlement = useCallback(async () => {
+    if (!env.isSupabaseConfigured) return setEntitlement('free');
+    setEntitlement('loading');
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user) return setEntitlement('error');
+    const { data, error } = await supabase.from('profiles').select('premium_until').eq('id', auth.user.id).single();
+    if (error) return setEntitlement('error');
+    const premiumUntil = typeof data?.premium_until === 'string' ? Date.parse(data.premium_until) : 0;
+    setEntitlement(premiumUntil > Date.now() ? 'premium' : 'free');
+  }, []);
+
+  useFocusEffect(useCallback(() => { void refreshEntitlement(); }, [refreshEntitlement]));
+
+  if (entitlement !== 'premium') return <PremiumGate locale={locale} onRefresh={() => void refreshEntitlement()} state={entitlement} />;
+  return <SpeakingPracticeContent />;
+}
+
+function PremiumGate({ locale, onRefresh, state }: { locale: 'en' | 'fr'; onRefresh: () => void; state: 'loading' | 'free' | 'error' }) {
+  const fr = locale === 'fr';
+  return <SafeAreaView style={styles.safeArea}><View style={styles.gate}>
+    <View style={styles.crown}><Crown color={colors.premium} fill={colors.premium} size={42} /></View>
+    <View style={styles.premiumBadge}><LockKeyhole color={colors.primaryDark} size={15} /><Text style={styles.premiumBadgeText}>PREMIUM</Text></View>
+    <Text style={styles.gateTitle}>{fr ? 'Débloquez la pratique' : 'Unlock Practice'}</Text>
+    <Text style={styles.price}>$20 <Text style={styles.priceInterval}>{fr ? '/ mois' : '/ month'}</Text></Text>
+    <Text style={styles.gateBody}>{fr ? 'La pratique orale IA est réservée aux membres Premium. Les utilisateurs gratuits ne peuvent pas enregistrer ni envoyer d’exercices.' : 'AI speaking practice is exclusively for Premium members. Free users cannot record or submit practice exercises.'}</Text>
+    <View style={styles.benefits}><Text style={styles.benefit}>✓ {fr ? 'Pratique orale IA illimitée' : 'Unlimited AI speaking practice'}</Text><Text style={styles.benefit}>✓ {fr ? 'Retour personnalisé' : 'Personalized feedback'}</Text><Text style={styles.benefit}>✓ {fr ? 'Exercices adaptés au niveau' : 'Level-matched exercises'}</Text></View>
+    {state === 'loading' ? <Text accessibilityLiveRegion="polite" style={styles.checking}>{fr ? 'Vérification de votre abonnement…' : 'Checking your subscription…'}</Text> : <Pressable accessibilityRole="button" onPress={onRefresh} style={styles.refreshButton}><RefreshCw color={colors.onPrimary} size={19} /><Text style={styles.refreshText}>{state === 'error' ? (fr ? 'Réessayer' : 'Try again') : (fr ? 'J’ai déjà Premium' : 'I already have Premium')}</Text></Pressable>}
+    <Text style={styles.comingSoon}>{fr ? 'Le paiement sera disponible prochainement.' : 'Payment activation is coming soon.'}</Text>
+  </View></SafeAreaView>;
+}
+
+function SpeakingPracticeContent() {
   const { level, locale } = useLearnerPreferences();
   const prompt = level === 'A2' ? 'Describe what two people are doing right now in a busy café.' : level === 'B1' ? 'Tell a short story about something unexpected that happened while you were travelling.' : 'Explain how your city would change if public transport were free.';
   const copy = locale === 'fr' ? { eyebrow: 'PRATIQUE ORALE IA', title: 'Exprimez-vous', hint: 'Utilisez le motif de votre leçon actuelle.', recording: 'Enregistrement', ready: 'Enregistrement prêt', start: 'Appuyez pour commencer', startLabel: 'Commencer l’enregistrement', stopLabel: 'Arrêter l’enregistrement', evaluate: 'Évaluer mon expression', evaluating: 'Évaluation…', feedback: 'Retour IA', permissionTitle: 'Microphone requis', permissionBody: 'Autorisez le microphone pour pratiquer votre expression orale.', unavailable: 'Évaluation indisponible', audioUnavailable: 'Votre enregistrement a été sauvegardé, mais le retour audio IA est temporairement indisponible.', retry: 'Veuillez réessayer.' } : { eyebrow: 'AI SPEAKING PRACTICE', title: 'Express yourself', hint: 'Use the pattern from your current lesson.', recording: 'Recording', ready: 'Recording ready', start: 'Tap to begin', startLabel: 'Start recording', stopLabel: 'Stop recording', evaluate: 'Evaluate my speaking', evaluating: 'Evaluating…', feedback: 'AI feedback', permissionTitle: 'Microphone required', permissionBody: 'Allow microphone access to practise speaking.', unavailable: 'Evaluation unavailable', audioUnavailable: 'Your recording was saved, but AI audio feedback is temporarily unavailable.', retry: 'Please try again.' };
@@ -81,4 +117,5 @@ export function SpeakingPracticeScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: colors.background, flex: 1 }, container: { alignItems: 'center', flex: 1, gap: spacing.lg, padding: spacing.xl }, eyebrow: { color: colors.primary, fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 1 }, title: { color: colors.text, fontFamily: fonts.bold, fontSize: 31 }, promptCard: { backgroundColor: colors.surface, borderColor: colors.outline, borderRadius: radius.xl, borderWidth: 1, gap: spacing.md, padding: spacing.xl, width: '100%' }, prompt: { color: colors.text, fontFamily: fonts.semibold, fontSize: 20, lineHeight: 30 }, hint: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 14, lineHeight: 21 }, wave: { alignItems: 'center', backgroundColor: colors.primarySoft, borderRadius: radius.pill, height: 130, justifyContent: 'center', width: 130 }, waveActive: { backgroundColor: colors.primary }, stateText: { color: colors.textMuted, fontFamily: fonts.medium, fontSize: 15 }, recordButton: { alignItems: 'center', backgroundColor: colors.primaryDark, borderRadius: radius.pill, height: 70, justifyContent: 'center', width: 70 }, stopButton: { backgroundColor: colors.error }, evaluateButton: { backgroundColor: colors.primary, borderRadius: radius.pill, minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.xl }, evaluateText: { color: colors.onPrimary, fontFamily: fonts.semibold }, feedback: { backgroundColor: colors.successSoft, borderRadius: radius.lg, gap: spacing.sm, padding: spacing.lg, width: '100%' }, feedbackTitle: { color: colors.success, fontFamily: fonts.bold, fontSize: 17 }, feedbackText: { color: colors.text, fontFamily: fonts.regular, lineHeight: 21 },
+  gate: { alignItems: 'center', flex: 1, gap: spacing.lg, justifyContent: 'center', padding: spacing.xl }, crown: { alignItems: 'center', backgroundColor: '#FFF6D6', borderRadius: radius.pill, height: 92, justifyContent: 'center', width: 92 }, premiumBadge: { alignItems: 'center', backgroundColor: colors.primarySoft, borderRadius: radius.pill, flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }, premiumBadgeText: { color: colors.primaryDark, fontFamily: fonts.bold, fontSize: 11, letterSpacing: 1 }, gateTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 31, textAlign: 'center' }, price: { color: colors.primaryDark, fontFamily: fonts.bold, fontSize: 38 }, priceInterval: { color: colors.textMuted, fontFamily: fonts.medium, fontSize: 16 }, gateBody: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 15, lineHeight: 23, maxWidth: 420, textAlign: 'center' }, benefits: { alignSelf: 'stretch', backgroundColor: colors.surface, borderColor: colors.outline, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, padding: spacing.lg }, benefit: { color: colors.text, fontFamily: fonts.medium, fontSize: 14 }, checking: { color: colors.primaryDark, fontFamily: fonts.medium, fontSize: 14 }, refreshButton: { alignItems: 'center', backgroundColor: colors.primaryDark, borderRadius: radius.pill, flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', minHeight: 52, paddingHorizontal: spacing.xl }, refreshText: { color: colors.onPrimary, fontFamily: fonts.semibold, fontSize: 15 }, comingSoon: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12 },
 });

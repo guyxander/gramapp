@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ArrowRight, Check, Eye, Lightbulb, Trees } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,9 +19,13 @@ type Props = NativeStackScreenProps<LearnerStackParamList, 'LessonDiscovery'>;
 
 const stepOrder: LessonStep[] = ['experience', 'notice', 'discover', 'practice', 'produce', 'review'];
 
-export function LessonDiscoveryScreen({ navigation }: Props) {
+const EXERCISE_DURATION_MS = 10 * 60 * 1000;
+
+export function LessonDiscoveryScreen({ navigation, route }: Props) {
   const { level, locale } = useLearnerPreferences();
-  const lesson = getLesson(level, locale);
+  const lesson = getLesson(level, locale, route.params.dayIndex);
+  const deadlineRef = useRef(Date.now() + EXERCISE_DURATION_MS);
+  const [remainingSeconds, setRemainingSeconds] = useState(EXERCISE_DURATION_MS / 1000);
   const [step, setStep] = useState<LessonStep>('experience');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [practiceAnswer, setPracticeAnswer] = useState<string | null>(null);
@@ -43,7 +47,17 @@ export function LessonDiscoveryScreen({ navigation }: Props) {
       if (active) setAttempt(handle);
     }).catch(() => undefined);
     return () => { active = false; };
+  }, [lesson.id]);
+
+  useEffect(() => {
+    const updateRemaining = () => setRemainingSeconds(Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000)));
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 1000);
+    const subscription = AppState.addEventListener('change', updateRemaining);
+    return () => { clearInterval(interval); subscription.remove(); };
   }, []);
+
+  const timeLabel = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
 
   const advance = async () => {
     if (step === 'review') {
@@ -89,7 +103,7 @@ export function LessonDiscoveryScreen({ navigation }: Props) {
         </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle}>{lesson.title}</Text>
-          <Text style={styles.headerTime}>{locale === 'fr' ? '07:30 restantes' : '07:30 remaining'}</Text>
+          <Text accessibilityLiveRegion="polite" style={[styles.headerTime, remainingSeconds === 0 && styles.headerTimeExpired]}>{timeLabel} {locale === 'fr' ? 'restantes' : 'remaining'}</Text>
         </View>
       </View>
 
@@ -148,8 +162,8 @@ function ExperienceStage({ lesson }: { lesson: LessonContent }) {
         <Text style={styles.prompt}>{lesson.prompt}</Text>
       </View>
       <View style={styles.examples}>
-        {lesson.examples.map((example) => (
-          <Text key={example.subject} style={styles.exampleText}>
+        {lesson.examples.map((example, index) => (
+          <Text key={`${example.action}-${index}`} style={styles.exampleText}>
             <Text style={styles.exampleSubject}>{example.subject} </Text>
             <Text style={styles.exampleAction}>{example.action}</Text> {example.detail}
           </Text>
@@ -170,8 +184,8 @@ function NoticeStage({ lesson, locale, onSelect, selectedOption }: { lesson: Les
         </View>
       </View>
       <View style={styles.compactExamples}>
-        {lesson.examples.map((example) => (
-          <Text key={example.subject} style={styles.compactExample}>{example.subject} <Text style={styles.exampleAction}>{example.action}</Text></Text>
+        {lesson.examples.map((example, index) => (
+          <Text key={`${example.action}-${index}`} style={styles.compactExample}>{example.subject} <Text style={styles.exampleAction}>{example.action}</Text></Text>
         ))}
       </View>
       <View style={styles.options}>
@@ -222,6 +236,7 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1 },
   headerTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 18 },
   headerTime: { color: colors.primaryDark, fontFamily: fonts.medium, fontSize: 12, marginTop: 2 },
+  headerTimeExpired: { color: colors.error },
   content: { gap: spacing.section, padding: spacing.lg, paddingBottom: 132 },
   stage: { gap: spacing.xxl },
   scene: { alignItems: 'center', backgroundColor: '#E5F4E9', borderRadius: radius.xl, gap: spacing.md, minHeight: 235, overflow: 'hidden', padding: spacing.xxl },

@@ -3,6 +3,20 @@ import { supabase } from '../../../lib/supabase';
 
 export type AttemptHandle = { attemptId: string; lessonId: string } | null;
 
+export async function getNextCurriculumDay(level: string): Promise<number> {
+  if (!env.isSupabaseConfigured) return 0;
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+  if (authError || !auth.user) return 0;
+  const { count, error } = await supabase
+    .from('lesson_attempts')
+    .select('lesson_id,lessons!inner(level)', { count: 'exact', head: true })
+    .eq('user_id', auth.user.id)
+    .eq('status', 'completed')
+    .eq('lessons.level', level);
+  if (error) throw error;
+  return Math.min(count ?? 0, 179);
+}
+
 export async function startLessonAttempt(slug: string): Promise<AttemptHandle> {
   if (!env.isSupabaseConfigured) return null;
   const { data: lesson, error: lessonError } = await supabase.from('lessons').select('id').eq('slug', slug).single();

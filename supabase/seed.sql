@@ -5,7 +5,7 @@ insert into public.achievements (id, name, description, icon, xp_reward, criteri
 on conflict (id) do update set name = excluded.name, description = excluded.description, icon = excluded.icon, xp_reward = excluded.xp_reward, criteria = excluded.criteria;
 
 insert into public.subscription_plans (id, name, price_minor, currency, interval, active, benefits) values
-  ('premium-monthly', 'Premium mensuel', 500000, 'NGN', 'monthly', true, '["unlimited_learning","unlimited_ai","tutor_assistance","advanced_analytics"]'),
+  ('premium-monthly', 'GramApp Premium Monthly', 2000, 'USD', 'monthly', true, '["premium_practice","unlimited_ai_feedback","level_matched_exercises"]'),
   ('premium-annual', 'Premium annuel', 5000000, 'NGN', 'annual', true, '["unlimited_learning","unlimited_ai","tutor_assistance","advanced_analytics"]')
 on conflict (id) do update set name = excluded.name, price_minor = excluded.price_minor, currency = excluded.currency, interval = excluded.interval, active = excluded.active, benefits = excluded.benefits;
 

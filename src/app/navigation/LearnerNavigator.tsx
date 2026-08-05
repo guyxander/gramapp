@@ -10,7 +10,7 @@ import { TutorDiscoveryScreen } from '../../features/tutors/screens/TutorDiscove
 import { useLearnerPreferences } from '../../features/onboarding/preferences';
 import { colors, fonts } from '../../theme/tokens';
 
-export type LearnerStackParamList = { LearnerTabs: undefined; LessonDiscovery: undefined };
+export type LearnerStackParamList = { LearnerTabs: undefined; LessonDiscovery: { dayIndex: number } };
 export type LearnerTabParamList = { Learn: undefined; Practice: undefined; Tutors: undefined; Profile: undefined };
 
 const Stack = createNativeStackNavigator<LearnerStackParamList>();

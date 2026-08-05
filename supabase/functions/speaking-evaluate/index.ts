@@ -9,6 +9,9 @@ const bytesToBase64 = (bytes: Uint8Array) => {
 
 export default {
   fetch: withSupabase({ auth: 'user' }, async (req, ctx) => {
+    const { data: profile, error: profileError } = await ctx.supabase.from('profiles').select('premium_until').single()
+    const premiumUntil = typeof profile?.premium_until === 'string' ? Date.parse(profile.premium_until) : 0
+    if (profileError || premiumUntil <= Date.now()) return Response.json({ error: 'Premium subscription required' }, { status: 403 })
     const { attemptId } = await req.json() as { attemptId?: string }
     if (!attemptId) return Response.json({ error: 'attemptId required' }, { status: 400 })
     const { data: attempt, error: attemptError } = await ctx.supabase.from('speaking_attempts').select('*').eq('id', attemptId).single()
