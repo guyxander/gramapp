@@ -11,10 +11,11 @@ import { TutorDashboardScreen } from '../../features/tutors/screens/TutorDashboa
 import { LearnerOnboardingScreen } from '../../features/onboarding/screens/LearnerOnboardingScreen';
 import { LearnerPreferencesProvider, type LearnerPreferences } from '../../features/onboarding/preferences';
 import { LearnerNavigator } from './LearnerNavigator';
+import { SuperAdminNavigator } from './SuperAdminNavigator';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../theme/tokens';
 
-type RootStackParamList = { Welcome: undefined; LearnerApp: undefined; TutorApp: undefined; AdminApp: undefined };
+type RootStackParamList = { Welcome: undefined; LearnerApp: undefined; TutorApp: undefined; AdminApp: undefined; SuperAdminApp: undefined };
 type AppRole = 'learner' | 'tutor' | 'super_admin' | 'content_admin' | 'support_admin' | 'finance_admin' | 'moderator';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -73,7 +74,9 @@ export function AppNavigator() {
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {session && role === 'tutor' ? (
+        {session && role === 'super_admin' ? (
+          <Stack.Screen component={SuperAdminNavigator} name="SuperAdminApp" />
+        ) : session && role === 'tutor' ? (
           <Stack.Screen component={TutorDashboardScreen} name="TutorApp" />
         ) : session && role !== 'learner' ? (
           <Stack.Screen component={AdminDashboardScreen} name="AdminApp" />
