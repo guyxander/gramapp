@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
-import { Bell, Crown, Download, FileText, Flame, Gift, LogOut, Star, Trash2 } from 'lucide-react-native';
+import { Bell, Crown, Download, FileText, Flame, Gift, GraduationCap, LogOut, ShieldCheck, Star, Trash2 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -19,7 +19,7 @@ type Notification = { id: number; title: string; body: string; read_at: string |
 
 const emptyProfile: ProfileData = { display_name: null, xp: 0, streak_days: 0, referral_code: null, premium_until: null };
 
-export function LearnerProfileScreen() {
+export function LearnerProfileScreen({ canAccessAdmin, canAccessTutor }: { canAccessAdmin: boolean; canAccessTutor: boolean }) {
   const navigation = useNavigation<NativeStackNavigationProp<LearnerStackParamList>>();
   const { level, locale } = useLearnerPreferences();
   const fr = locale === 'fr';
@@ -96,6 +96,7 @@ export function LearnerProfileScreen() {
   const name = profile.display_name ?? copy.learner;
   const hasPremium = profile.premium_until ? Date.parse(profile.premium_until) > Date.now() : false;
   return <SafeAreaView style={styles.safeArea}><ScrollView contentContainerStyle={styles.content}>
+    {canAccessAdmin || canAccessTutor ? <View style={styles.actions}>{canAccessAdmin ? <Action icon={<ShieldCheck color={colors.primary} size={22} />} label="Open admin dashboard" onPress={() => navigation.navigate('AdminDashboard')} /> : null}{canAccessTutor ? <Action icon={<GraduationCap color={colors.discovery} size={22} />} label="Open tutor dashboard" onPress={() => navigation.navigate('TutorDashboard')} /> : null}</View> : null}
     <View style={styles.identity}><View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1).toUpperCase()}</Text></View><Text style={styles.name}>{name}</Text><Text style={styles.level}>{copy.level} {level}</Text></View>
     {loadError ? <Text accessibilityLiveRegion="polite" style={styles.error}>{copy.loadError}</Text> : null}
     <View style={styles.stats}><Metric icon={<Star color={colors.xp} fill={colors.xp} size={23} />} label="XP" value={profile.xp.toLocaleString(fr ? 'fr-FR' : 'en')} /><Metric icon={<Flame color={colors.streak} size={23} />} label={copy.days} value={String(profile.streak_days)} /><Metric icon={<Crown color={colors.premium} size={23} />} label={copy.plan} onPress={() => navigation.navigate('Subscription')} value={hasPremium ? 'Premium' : copy.free} /></View>

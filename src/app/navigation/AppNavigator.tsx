@@ -6,16 +6,13 @@ import type { Session } from '@supabase/supabase-js';
 
 import { env } from '../../config/env';
 import { WelcomeScreen } from '../../features/auth/screens/WelcomeScreen';
-import { AdminDashboardScreen } from '../../features/admin/screens/AdminDashboardScreen';
-import { TutorDashboardScreen } from '../../features/tutors/screens/TutorDashboardScreen';
 import { LearnerOnboardingScreen } from '../../features/onboarding/screens/LearnerOnboardingScreen';
 import { LearnerPreferencesProvider, type LearnerPreferences } from '../../features/onboarding/preferences';
 import { LearnerNavigator } from './LearnerNavigator';
-import { SuperAdminNavigator } from './SuperAdminNavigator';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../theme/tokens';
 
-type RootStackParamList = { Welcome: undefined; LearnerApp: undefined; TutorApp: undefined; AdminApp: undefined; SuperAdminApp: undefined };
+type RootStackParamList = { Welcome: undefined; LearnerApp: undefined };
 type AppRole = 'learner' | 'tutor' | 'super_admin' | 'content_admin' | 'support_admin' | 'finance_admin' | 'moderator';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -31,6 +28,7 @@ export function AppNavigator() {
   const [preferences, setPreferences] = useState<LearnerPreferences>({ locale: 'fr', level: 'A2' });
   const [onboardingComplete, setOnboardingComplete] = useState(!env.isSupabaseConfigured);
   const [roleReady, setRoleReady] = useState(!env.isSupabaseConfigured);
+  const [hasTutorProfile, setHasTutorProfile] = useState(false);
 
   useEffect(() => {
     if (!env.isSupabaseConfigured) return;
@@ -45,12 +43,17 @@ export function AppNavigator() {
   }, []);
 
   useEffect(() => {
-    if (!session) { setRole('learner'); setRoleReady(true); return; }
+    if (!session) { setRole('learner'); setHasTutorProfile(false); setRoleReady(true); return; }
     setRoleReady(false);
     let active = true;
-    void supabase.from('profiles').select('role,locale,level,onboarding_completed_at').eq('id', session.user.id).single().then(({ data }) => {
+    void Promise.all([
+      supabase.from('profiles').select('role,locale,level,onboarding_completed_at').eq('id', session.user.id).single(),
+      supabase.from('tutor_profiles').select('user_id').eq('user_id', session.user.id).eq('verified', true).maybeSingle(),
+    ]).then(([profileResult, tutorResult]) => {
       if (active) {
+        const data = profileResult.data;
         if (data?.role) setRole(data.role as AppRole);
+        setHasTutorProfile(Boolean(tutorResult.data));
         if (data?.locale && data?.level) setPreferences({ locale: data.locale as LearnerPreferences['locale'], level: data.level as LearnerPreferences['level'] });
         setOnboardingComplete(Boolean(data?.onboarding_completed_at));
         setRoleReady(true);
@@ -74,19 +77,13 @@ export function AppNavigator() {
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {session && role === 'super_admin' ? (
-          <Stack.Screen component={SuperAdminNavigator} name="SuperAdminApp" />
-        ) : session && role === 'tutor' ? (
-          <Stack.Screen component={TutorDashboardScreen} name="TutorApp" />
-        ) : session && role !== 'learner' ? (
-          <Stack.Screen component={AdminDashboardScreen} name="AdminApp" />
-        ) : session && !onboardingComplete ? (
+        {session && !onboardingComplete ? (
           <Stack.Screen name="LearnerApp">
             {() => <LearnerOnboardingScreen onComplete={completeOnboarding} />}
           </Stack.Screen>
         ) : session ? (
           <Stack.Screen name="LearnerApp">
-            {() => <LearnerPreferencesProvider value={preferences}><LearnerNavigator /></LearnerPreferencesProvider>}
+            {() => <LearnerPreferencesProvider value={preferences}><LearnerNavigator canAccessAdmin={role !== 'learner' && role !== 'tutor'} canAccessTutor={role === 'tutor' || hasTutorProfile} /></LearnerPreferencesProvider>}
           </Stack.Screen>
         ) : (
           <Stack.Screen name="Welcome">
