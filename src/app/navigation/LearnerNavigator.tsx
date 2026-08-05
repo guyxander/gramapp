@@ -7,10 +7,11 @@ import { LessonDiscoveryScreen } from '../../features/lessons/screens/LessonDisc
 import { LearnerProfileScreen } from '../../features/profile/screens/LearnerProfileScreen';
 import { SpeakingPracticeScreen } from '../../features/speaking/screens/SpeakingPracticeScreen';
 import { TutorDiscoveryScreen } from '../../features/tutors/screens/TutorDiscoveryScreen';
+import { SubscriptionScreen } from '../../features/subscription/screens/SubscriptionScreen';
 import { useLearnerPreferences } from '../../features/onboarding/preferences';
 import { colors, fonts } from '../../theme/tokens';
 
-export type LearnerStackParamList = { LearnerTabs: undefined; LessonDiscovery: { dayIndex: number } };
+export type LearnerStackParamList = { LearnerTabs: undefined; LessonDiscovery: { dayIndex: number }; Subscription: undefined };
 export type LearnerTabParamList = { Learn: undefined; Practice: undefined; Tutors: undefined; Profile: undefined };
 
 const Stack = createNativeStackNavigator<LearnerStackParamList>();
@@ -62,6 +63,7 @@ export function LearnerNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen component={LearnerTabs} name="LearnerTabs" />
       <Stack.Screen component={LessonDiscoveryScreen} name="LessonDiscovery" />
+      <Stack.Screen component={SubscriptionScreen} name="Subscription" />
     </Stack.Navigator>
   );
 }

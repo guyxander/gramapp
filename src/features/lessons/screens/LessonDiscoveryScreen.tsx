@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, ArrowRight, Check, Eye, Lightbulb, Trees } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Check, Clock3, Crown, Eye, Lightbulb, Trees } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { LearnerStackParamList } from '../../../app/navigation/LearnerNavigator';
@@ -14,18 +14,19 @@ import { getLesson, type LessonContent, type LessonStep } from '../data/lessonCa
 import { useLearnerPreferences, type AppLocale } from '../../onboarding/preferences';
 import { queueProductionEvaluation } from '../services/productionEvaluation';
 import { completeLessonAttempt, startLessonAttempt, type AttemptHandle } from '../services/lessonProgress';
+import { consumeLearningSeconds } from '../services/learningAllowance';
 
 type Props = NativeStackScreenProps<LearnerStackParamList, 'LessonDiscovery'>;
 
 const stepOrder: LessonStep[] = ['experience', 'notice', 'discover', 'practice', 'produce', 'review'];
 
-const EXERCISE_DURATION_MS = 10 * 60 * 1000;
-
 export function LessonDiscoveryScreen({ navigation, route }: Props) {
   const { level, locale } = useLearnerPreferences();
   const lesson = getLesson(level, locale, route.params.dayIndex);
-  const deadlineRef = useRef(Date.now() + EXERCISE_DURATION_MS);
-  const [remainingSeconds, setRemainingSeconds] = useState(EXERCISE_DURATION_MS / 1000);
+  const lastBilledAtRef = useRef(Date.now());
+  const billingRef = useRef(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [allowanceState, setAllowanceState] = useState<'loading' | 'active' | 'premium' | 'locked'>('loading');
   const [step, setStep] = useState<LessonStep>('experience');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [practiceAnswer, setPracticeAnswer] = useState<string | null>(null);
@@ -39,25 +40,57 @@ export function LessonDiscoveryScreen({ navigation, route }: Props) {
     (step !== 'notice' || selectedOption === lesson.correctNoticeId) &&
     (step !== 'practice' || practiceAnswer !== null) &&
     (step !== 'produce' || production.trim().length >= lesson.production.minimumCharacters) &&
-    !submitting;
+    !submitting && allowanceState !== 'locked';
 
   useEffect(() => {
+    if (allowanceState !== 'active' && allowanceState !== 'premium') return;
     let active = true;
     void startLessonAttempt(lesson.id).then((handle) => {
       if (active) setAttempt(handle);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [lesson.id]);
+  }, [allowanceState, lesson.id]);
 
   useEffect(() => {
-    const updateRemaining = () => setRemainingSeconds(Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000)));
-    updateRemaining();
-    const interval = setInterval(updateRemaining, 1000);
-    const subscription = AppState.addEventListener('change', updateRemaining);
-    return () => { clearInterval(interval); subscription.remove(); };
+    let mounted = true;
+    const billElapsed = async () => {
+      if (billingRef.current) return;
+      const now = Date.now();
+      const elapsed = Math.floor((now - lastBilledAtRef.current) / 1000);
+      if (elapsed < 5) return;
+      lastBilledAtRef.current += elapsed * 1000;
+      billingRef.current = true;
+      try {
+        const allowance = await consumeLearningSeconds(elapsed);
+        if (!mounted) return;
+        if (allowance.premium) setAllowanceState('premium');
+        else {
+          setRemainingSeconds(allowance.availableSeconds);
+          if (!allowance.allowed || allowance.availableSeconds <= 0) setAllowanceState('locked');
+        }
+      } catch { /* retain the last known allowance during a transient network error */ }
+      finally { billingRef.current = false; }
+    };
+
+    void consumeLearningSeconds(0).then((allowance) => {
+      if (!mounted) return;
+      lastBilledAtRef.current = Date.now();
+      if (allowance.premium) setAllowanceState('premium');
+      else {
+        setRemainingSeconds(allowance.availableSeconds);
+        setAllowanceState(allowance.availableSeconds > 0 ? 'active' : 'locked');
+      }
+    }).catch(() => { if (mounted) setAllowanceState('locked'); });
+
+    const interval = setInterval(() => {
+      if (allowanceState !== 'premium') setRemainingSeconds((current) => Math.max(0, current - 1));
+      void billElapsed();
+    }, 1000);
+    const subscription = AppState.addEventListener('change', () => { void billElapsed(); });
+    return () => { mounted = false; clearInterval(interval); subscription.remove(); void billElapsed(); };
   }, []);
 
-  const timeLabel = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
+  const timeLabel = allowanceState === 'premium' ? '∞ Premium' : `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
 
   const advance = async () => {
     if (step === 'review') {
@@ -103,11 +136,15 @@ export function LessonDiscoveryScreen({ navigation, route }: Props) {
         </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle}>{lesson.title}</Text>
-          <Text accessibilityLiveRegion="polite" style={[styles.headerTime, remainingSeconds === 0 && styles.headerTimeExpired]}>{timeLabel} {locale === 'fr' ? 'restantes' : 'remaining'}</Text>
+          <Text accessibilityLiveRegion="polite" style={[styles.headerTime, allowanceState === 'locked' && styles.headerTimeExpired]}>{timeLabel} {allowanceState === 'premium' ? '' : locale === 'fr' ? 'aujourd’hui' : 'today'}</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {allowanceState === 'loading' ? <View style={styles.allowanceMessage}><Clock3 color={colors.primary} size={42} /><Text style={styles.allowanceTitle}>{locale === 'fr' ? 'Vérification du temps disponible…' : 'Checking today’s learning time…'}</Text></View> : null}
+
+      {allowanceState === 'locked' ? <View style={styles.allowanceMessage}><View style={styles.lockIcon}><Clock3 color={colors.error} size={42} /></View><Text style={styles.allowanceTitle}>{locale === 'fr' ? 'Votre temps gratuit est écoulé' : 'Your free time is up for today'}</Text><Text style={styles.allowanceBody}>{locale === 'fr' ? 'Revenez demain pour 10 nouvelles minutes, ou passez à Premium pour apprendre sans limite.' : 'Come back tomorrow for 10 new minutes, or subscribe to Premium for unlimited learning.'}</Text><Pressable accessibilityRole="button" onPress={() => navigation.navigate('Subscription')} style={styles.subscribeButton}><Crown color={colors.onPrimary} size={20} /><Text style={styles.subscribeText}>{locale === 'fr' ? 'Voir GramApp Premium' : 'View GramApp Premium'}</Text></Pressable></View> : null}
+
+      {allowanceState === 'active' || allowanceState === 'premium' ? <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <LessonProgress current={step} locale={locale} />
 
         {step === 'experience' ? <ExperienceStage lesson={lesson} /> : null}
@@ -126,9 +163,9 @@ export function LessonDiscoveryScreen({ navigation, route }: Props) {
             response={production}
           />
         ) : null}
-      </ScrollView>
+      </ScrollView> : null}
 
-      <View style={styles.footer}>
+      {allowanceState === 'active' || allowanceState === 'premium' ? <View style={styles.footer}>
         {step === 'notice' && selectedOption && !canContinue ? (
           <Text accessibilityLiveRegion="polite" style={styles.tryAgain}>{locale === 'fr' ? 'Regardez encore les mots colorés dans les exemples.' : 'Look again at the highlighted words in the examples.'}</Text>
         ) : null}
@@ -141,7 +178,7 @@ export function LessonDiscoveryScreen({ navigation, route }: Props) {
           <Text style={styles.continueText}>{continueLabel}</Text>
           {step === 'review' ? <Check color={colors.onPrimary} size={21} /> : <ArrowRight color={colors.onPrimary} size={21} />}
         </Pressable>
-      </View>
+      </View> : null}
     </SafeAreaView>
   );
 }
@@ -237,6 +274,12 @@ const styles = StyleSheet.create({
   headerTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 18 },
   headerTime: { color: colors.primaryDark, fontFamily: fonts.medium, fontSize: 12, marginTop: 2 },
   headerTimeExpired: { color: colors.error },
+  allowanceMessage: { alignItems: 'center', flex: 1, gap: spacing.lg, justifyContent: 'center', padding: spacing.xxl },
+  lockIcon: { alignItems: 'center', backgroundColor: '#FFF0F0', borderRadius: radius.pill, height: 92, justifyContent: 'center', width: 92 },
+  allowanceTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 27, textAlign: 'center' },
+  allowanceBody: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, maxWidth: 440, textAlign: 'center' },
+  subscribeButton: { alignItems: 'center', backgroundColor: colors.primaryDark, borderRadius: radius.pill, flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', minHeight: 54, paddingHorizontal: spacing.xl },
+  subscribeText: { color: colors.onPrimary, fontFamily: fonts.semibold, fontSize: 15 },
   content: { gap: spacing.section, padding: spacing.lg, paddingBottom: 132 },
   stage: { gap: spacing.xxl },
   scene: { alignItems: 'center', backgroundColor: '#E5F4E9', borderRadius: radius.xl, gap: spacing.md, minHeight: 235, overflow: 'hidden', padding: spacing.xxl },

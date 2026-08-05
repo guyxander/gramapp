@@ -14,7 +14,7 @@ export async function getNextCurriculumDay(level: string): Promise<number> {
     .eq('status', 'completed')
     .eq('lessons.level', level);
   if (error) throw error;
-  return Math.min(count ?? 0, 179);
+  return Math.min(count ?? 0, 269);
 }
 
 export async function startLessonAttempt(slug: string): Promise<AttemptHandle> {

@@ -21,7 +21,7 @@ export type LessonContent = {
   rewards: { completionXp: number; perfectPracticeBonusXp: number };
 };
 
-export const CURRICULUM_LENGTH_DAYS = 180;
+export const CURRICULUM_LENGTH_DAYS = 270;
 
 const contexts: Record<CefrLevel, readonly string[]> = {
   A2: ['at the park', 'at home', 'in a classroom', 'at a market', 'on a bus', 'at a sports centre'],

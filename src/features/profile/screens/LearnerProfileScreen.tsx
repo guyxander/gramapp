@@ -3,7 +3,10 @@ import { Alert, Linking, Pressable, ScrollView, Share, StyleSheet, Text, TextInp
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { Bell, Crown, Download, FileText, Flame, Gift, LogOut, Star, Trash2 } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import type { LearnerStackParamList } from '../../../app/navigation/LearnerNavigator';
 import { env } from '../../../config/env';
 import { supabase } from '../../../lib/supabase';
 import { colors, fonts, radius, spacing } from '../../../theme/tokens';
@@ -17,6 +20,7 @@ type Notification = { id: number; title: string; body: string; read_at: string |
 const emptyProfile: ProfileData = { display_name: null, xp: 0, streak_days: 0, referral_code: null, premium_until: null };
 
 export function LearnerProfileScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<LearnerStackParamList>>();
   const { level, locale } = useLearnerPreferences();
   const fr = locale === 'fr';
   const copy = fr ? {
@@ -94,7 +98,7 @@ export function LearnerProfileScreen() {
   return <SafeAreaView style={styles.safeArea}><ScrollView contentContainerStyle={styles.content}>
     <View style={styles.identity}><View style={styles.avatar}><Text style={styles.avatarText}>{name.slice(0, 1).toUpperCase()}</Text></View><Text style={styles.name}>{name}</Text><Text style={styles.level}>{copy.level} {level}</Text></View>
     {loadError ? <Text accessibilityLiveRegion="polite" style={styles.error}>{copy.loadError}</Text> : null}
-    <View style={styles.stats}><Metric icon={<Star color={colors.xp} fill={colors.xp} size={23} />} label="XP" value={profile.xp.toLocaleString(fr ? 'fr-FR' : 'en')} /><Metric icon={<Flame color={colors.streak} size={23} />} label={copy.days} value={String(profile.streak_days)} /><Metric icon={<Crown color={colors.premium} size={23} />} label={copy.plan} value={hasPremium ? 'Premium' : copy.free} /></View>
+    <View style={styles.stats}><Metric icon={<Star color={colors.xp} fill={colors.xp} size={23} />} label="XP" value={profile.xp.toLocaleString(fr ? 'fr-FR' : 'en')} /><Metric icon={<Flame color={colors.streak} size={23} />} label={copy.days} value={String(profile.streak_days)} /><Metric icon={<Crown color={colors.premium} size={23} />} label={copy.plan} onPress={() => navigation.navigate('Subscription')} value={hasPremium ? 'Premium' : copy.free} /></View>
     <SectionTitle title={copy.mastery} /><View style={styles.card}>{mastery.length ? mastery.map((item) => <View key={item.topic} style={styles.masteryRow}><Text style={styles.masteryTopic}>{item.topic}</Text><View style={styles.track}><View style={[styles.fill, { width: `${Math.min(100, Number(item.mastery_score))}%` }]} /></View><Text style={styles.score}>{Math.round(Number(item.mastery_score))}%</Text></View>) : <Text style={styles.empty}>{copy.noMastery}</Text>}</View>
     <SectionTitle title={copy.reports} /><View style={styles.card}>{reports.length ? reports.map((report) => <View key={report.id} style={styles.listRow}><FileText color={colors.primary} size={22} /><View style={styles.listCopy}><Text style={styles.listTitle}>{report.report_month}</Text><Text style={styles.listBody}>{report.summary.completedLessons ?? 0} {copy.lessons} • {report.summary.xpEarned ?? 0} XP</Text></View></View>) : <Text style={styles.empty}>{copy.noReports}</Text>}</View>
     <SectionTitle title={copy.notifications} /><View style={styles.card}>{notifications.length ? notifications.map((item) => <View key={item.id} style={styles.listRow}><Bell color={item.read_at ? colors.textMuted : colors.primary} size={21} /><View style={styles.listCopy}><Text style={styles.listTitle}>{item.title}</Text><Text style={styles.listBody}>{item.body}</Text></View></View>) : <Text style={styles.empty}>{copy.noNotifications}</Text>}</View>
@@ -102,7 +106,10 @@ export function LearnerProfileScreen() {
   </ScrollView></SafeAreaView>;
 }
 
-function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) { return <View style={styles.metric}>{icon}<Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>; }
+function Metric({ icon, label, onPress, value }: { icon: ReactNode; label: string; onPress?: () => void; value: string }) {
+  if (onPress) return <Pressable accessibilityLabel={`${label}: ${value}`} accessibilityRole="button" onPress={onPress} style={styles.metric}>{icon}<Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></Pressable>;
+  return <View style={styles.metric}>{icon}<Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>;
+}
 function SectionTitle({ title }: { title: string }) { return <Text style={styles.sectionTitle}>{title}</Text>; }
 function Action({ disabled = false, icon, label, onPress }: { disabled?: boolean; icon: ReactNode; label: string; onPress: () => void }) { return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.action, disabled && styles.disabled]}>{icon}<Text style={styles.actionText}>{label}</Text></Pressable>; }
 
