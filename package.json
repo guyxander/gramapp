@@ -1,6 +1,6 @@
 {
   "name": "gramapp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.ts",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -37,7 +37,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && expo config --type public",
-    "release:check": "npm run verify && expo export --platform android --output-dir dist/android"
+    "release:check": "npm run verify && expo export --platform android --output-dir dist/android",
+    "release:android": "node scripts/publish-android-release.mjs"
   },
   "private": true
 }

@@ -10,7 +10,7 @@ export default {
       .eq('active', true).order('version_code', { ascending: false }).limit(1).maybeSingle()
     if (error) return Response.json({ error: error.message }, { status: 500 })
     if (!data) return Response.json({ updateAvailable: false })
-    const officialOrigin = new URL(Deno.env.get('OFFICIAL_SITE_URL') ?? data.apk_url).origin
+    const officialOrigin = 'https://gramapp-two.vercel.app'
     if (new URL(data.apk_url).origin !== officialOrigin) return Response.json({ error: 'invalid release origin' }, { status: 500 })
     return Response.json({
       updateAvailable: data.version_code > currentCode,

@@ -74,7 +74,11 @@ export function LearnerProfileScreen({ canAccessAdmin, canAccessTutor }: { canAc
       const versionCode = Constants.expoConfig?.android?.versionCode ?? 1;
       const { data, error } = await supabase.functions.invoke('app-version', { body: { versionCode } });
       if (error) throw error;
-      if (data?.updateAvailable && data.release?.apk_url) await Linking.openURL(data.release.apk_url);
+      if (data?.updateAvailable && data.release?.apk_url) {
+        const downloadResult = await supabase.rpc('record_app_download');
+        const countedRelease = Array.isArray(downloadResult.data) ? downloadResult.data[0] : null;
+        await Linking.openURL(countedRelease?.apk_url ?? data.release.apk_url);
+      }
       else Alert.alert(copy.current, copy.currentBody);
     } catch { Alert.alert(copy.unavailable, copy.updateError); }
     finally { setCheckingUpdate(false); }

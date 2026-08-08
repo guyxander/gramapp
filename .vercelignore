@@ -1,0 +1,10 @@
+.git/
+.expo/
+.qa/
+android/
+assets/
+docs/
+node_modules/
+scripts/
+src/
+supabase/
